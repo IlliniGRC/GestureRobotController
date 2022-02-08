@@ -22,7 +22,7 @@ The third one is Robot Feedback System. The system is used to transmit the warni
 
 ### **Block Diagram**
 
-![Block Diagram](https://github.com/0-EricZhou-0/GestureRobotController/blob/e12615536202b90970c3d87948c224cb32847800/block_diagram.png)
+![Block Diagram](https://github.com/0-EricZhou-0/GestureRobotController/blob/main/block_diagram.png)
 
 ### **Subsystem Overview**
 
