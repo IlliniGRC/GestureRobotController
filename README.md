@@ -6,6 +6,8 @@
 
 Traditionally, different robots are controlled by their specialized controller from different companies, and it takes time to learn how to smoothly and naturally use them.
 
+![Visual Aid](https://github.com/0-EricZhou-0/GestureRobotController/blob/24163eae153ecba82c3c52a8171683d5026e511e/visual_aid.png)
+
 ### **Solution**
 
 We plan to design a robot controller which can recognize human gestures and send corresponding commands to robots. The system consists of three major subsystems.
@@ -20,7 +22,7 @@ The third one is Robot Feedback System. The system is used to transmit the warni
 
 ### **Block Diagram**
 
-![Block Diagram](https://github.com/0-EricZhou-0/GestureRobotController/blob/30818a82c5cfd2a7441b33995b91994a04efca4d/proposal.png)
+![Block Diagram](https://github.com/0-EricZhou-0/GestureRobotController/blob/e12615536202b90970c3d87948c224cb32847800/block_diagram.png)
 
 ### **Subsystem Overview**
 
