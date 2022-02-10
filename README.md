@@ -6,7 +6,7 @@
 
 Traditionally, different robots are controlled by their specialized controller from different companies, and it takes time to learn how to smoothly and naturally use them. We propose a gesture control system that build upon the system, making the process of controlling a robot simple and fun.
 
-![Visual Aid](https://github.com/0-EricZhou-0/GestureRobotController/blob/24163eae153ecba82c3c52a8171683d5026e511e/visual_aid.png)
+![Visual Aid](visual_aid.png)
 
 ### **Solution**
 
@@ -22,7 +22,7 @@ The third one is that it would be able to transmit the warnings of robots to sig
 
 ### **Block Diagram**
 
-![Block Diagram](https://github.com/0-EricZhou-0/GestureRobotController/blob/main/block_diagram.png)
+![Block Diagram](block_diagram.png)
 
 ### **Subsystem Overview**
 
