@@ -1,8 +1,10 @@
 # **Gesture Robot Controller**
 
 ## **Project proposal**
-### **Team Member: Eric Zhou, Guang Yin, Haoduo Yan**
-### **TA: Hanyin Shao**
+
+**Team Member:** Eric Zhou, Guang Yin, Haoduo Yan
+
+**TA:** Hanyin Shao
 ## **Problem**
 
 Traditionally, different robots are controlled by their specialized controller from different companies, and it takes time to learn how to smoothly and naturally use them. We propose a gesture control system that builds upon the system, making the process of controlling a robot simple and fun.
@@ -68,7 +70,7 @@ The system would be a program resides on both PC and embedded processor of the c
 
 ### **Tolerance Analysis**
 
-The gesture recognition algorithm is the most difficult part for us since none of us has related experience with it. We currently only plan to recognize static gestures, but dynamic gestures clearly have more potential.
+The IMUs will be measuring the magnetic field strength to calculate the angle of the unit. However, if the IMU is placed near a powerful external magnetic field source other than the earth (e.g. motors, large block of conductive metal, wall power cable/outlet), then the reading might be affected and produce garbage result.
 
 ## **Ethics and Safety**
 
