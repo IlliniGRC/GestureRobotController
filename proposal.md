@@ -5,6 +5,7 @@
 **Team Member:** Eric Zhou, Guang Yin, Haoduo Yan
 
 **TA:** Hanyin Shao
+
 ## **Problem**
 
 Traditionally, different robots are controlled by their specialized controller from different companies, and it takes time to learn how to smoothly and naturally use them. We propose a gesture control system that builds upon the system, making the process of controlling a robot simple and fun.
@@ -83,4 +84,3 @@ The IMUs will be measuring the magnetic field strength to calculate the angle of
 ### Build Safety
 
 1. Always power off the battery before any hardware changes. Rubber gloves are required before touching any electric components.
-
