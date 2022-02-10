@@ -43,6 +43,8 @@ The system would be a program resides on both PC and embedded processor of the c
 #### **Human Positioning System**
 
 - It should be able to read the data from 9-axis IMUs through IIC protocol.
+- It should be able to translate the readings into angles or other easy-to-understandable parameters
+- It can transmit the results of calculation to PC or robot controller for them to interpret the data.
 
 #### **Gesture Control System**
 
