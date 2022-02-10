@@ -10,13 +10,13 @@ Traditionally, different robots are controlled by their specialized controller f
 
 ### **Solution**
 
-We plan to design a robot controller which can recognize human gestures and send corresponding commands to robots. The system consists of three major subsystems.
+We plan to design a robot controller which can recognize human gestures and send corresponding commands to robots. The system will have three high-level requirements.
 
-The first one is Human Positioning System, it would be able to read the sensors placed on the body of the user and calculate the position of different body parts of the user and broadcast through Bluetooth.
+The first one is that the controller mounted on the user would be able to read the sensors placed on the body of the user and calculate the position of different body parts of the user and broadcast through Bluetooth.
 
-The second one is Gesture Controlling System, it would enable the gestures and movements of the user to be translated to actual robot controlling actions, and it would also have the capability of commanding the robot using another Bluetooth link.
+The second one is that it would enable the gestures and movements of the user to be translated to actual robot controlling actions through a software running on a powerful device (like PC) after receiving data using Bluetooth, and it would also have the capability of commanding the robot using another Bluetooth link.
 
-The third one is Robot Feedback System, it would be able to transmit the warnings of robots to signals that can be sensed by humans through actuators placed on the user, like lights (LEDs), vibration motors, and buzzers.
+The third one is that it would be able to transmit the warnings of robots to signals that can be sensed by humans through actuators placed on the user, like lights (LEDs), vibration motors, and buzzers.
 
 ## **Design**
 
