@@ -5,7 +5,16 @@
 1. [Week 2022-02-07 Finding parts](#2022-02-07-finding-parts)
 2. [Week 2022-02-14 Testing Wit-Motion WT901](#2022-02-14-testing-wit-motion-wt901)
 
+## Important Notes
+
+1. [WT901 Manual & Data Sheet](#wt901-manual-and-data-sheet)
+2. [WT901 Pinout](#wt901-pinout)
+3. [WT901 IIC](#wt901-iic)
+4. [Quaternion to Euler](#conversion-from-quaternion-to-euler-angle)
+
 ## 2022-02-07 Finding Parts
+
+([Back to top](#eric-worklog))
 
 Finding available IMUs
 
@@ -23,10 +32,14 @@ Questions to ask:
 
 ## 2022-02-14 Testing Wit-Motion WT901
 
+([Back to top](#eric-worklog))
+
+### WT901 Manual and Data Sheet
+
 - [WT901 Manual](https://github.com/WITMOTION/WT901/blob/master/WT901%20Manual.pdf)
 - [WT901 DataSheet](https://github.com/WITMOTION/WT901/blob/master/WT901%20Datasheet.pdf)
 
-The chip have following configuration
+### WT901 Pinout
 
 ![WT901 Chip](WT901_chip.png)
 
@@ -40,6 +53,8 @@ Testing image
 
 The chip can also use the `SCL` and `SDA` pins to communicate with outside with IIC protocol.IIC communication is also possible, but the script depends on Arduino right now since it is hard to find and use USB to IIC devices.
 
+### WT901 IIC
+
 **Notice:** Pull-up resistors are needed on `SCL` and `SDA` pins as the documentation specifies because IIC pins are open-drain.
 
 ![WT901 IIC_config](WT901_IIC_config.png)
@@ -52,3 +67,10 @@ In testing, a Arduino Nano acts like a bridge between computer and WT901 chip.
 
 - A less powerful embedded processor may be used other than STM32F427 at initial thought, the processing of data is not to heavy, even Arduino Nano can handle a few.
 - The processor should have ability to communicate through IIC (for WT901), PWM (for vibration motor and LED), and UART (for communicating with bluetooth chip).
+
+### Conversion from quaternion to Euler angle
+
+    // All angles in radian
+    float roll = atan2(2 * (q0 * q1 + q2 * q3), 1 - 2 * (pow(q1, 2) + pow(q2, 2)));
+    float pitch = asin(2 * (q0 * q2 - q3 * q1));
+    float yaw = atan2(2 * (q0 * q3 + q1 * q2), 1 - 2 * (pow(q2, 2) + pow(q3, 2)));
