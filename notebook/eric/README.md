@@ -51,7 +51,7 @@ Testing image
 
 ![WT901_UART](WT901_UART.jpg)
 
-The chip can also use the `SCL` and `SDA` pins to communicate with outside with IIC protocol.IIC communication is also possible, but the script depends on Arduino right now since it is hard to find and use USB to IIC devices.
+The chip can also use the `SCL` and `SDA` pins to communicate with outside with IIC protocol. IIC communication is possible, but the script depends on Arduino right now since it is hard to find and use USB to IIC devices.
 
 ### WT901 IIC
 
@@ -65,10 +65,14 @@ Testing image
 
 In testing, a Arduino Nano acts like a bridge between computer and WT901 chip.
 
+Thoughts about choosing embedded processor
+
 - A less powerful embedded processor may be used other than STM32F427 at initial thought, the processing of data is not to heavy, even Arduino Nano can handle a few.
 - The processor should have ability to communicate through IIC (for WT901), PWM (for vibration motor and LED), and UART (for communicating with bluetooth chip).
 
 ### Conversion from quaternion to Euler angle
+
+Source [Wikipedia](https://en.wikipedia.org/wiki/Conversion_between_quaternions_and_Euler_angles#:~:text=cy%3B%0A%0A%20%20%20%20return%20q%3B%0A%7D-,Quaternion%20to%20Euler%20angles%20conversion,-%5Bedit%5D)
 
     // All angles in radian
     float roll = atan2(2 * (q0 * q1 + q2 * q3), 1 - 2 * (pow(q1, 2) + pow(q2, 2)));
