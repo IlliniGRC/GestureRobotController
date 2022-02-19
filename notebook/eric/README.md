@@ -82,7 +82,9 @@ Source [Wikipedia](https://en.wikipedia.org/wiki/Conversion_between_quaternions_
 
 ### Using IIC to communicate with two WT901s
 
-Use two WT901s connected to IIC interface through a really long 4-wire ([V+, GND, SDA, SCL]) to test the chip feedback data. One of the chips has IIC device address `0x50`, while the other one have IIC device address `0x52` as labeled in the testing diagram.
+Use two WT901s connected to IIC interface through a extremely long 4-wire ([V+, GND, SDA, SCL]) to test the chip feedback data. This is done to simulated the scenario where the IMUs are mounted on human body.
+
+One of the chips has IIC device address `0x50`, while the other one have IIC device address `0x52` as labeled in the testing diagram.
 
 Testing image
 
