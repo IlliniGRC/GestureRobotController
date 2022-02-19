@@ -11,6 +11,7 @@
 2. [WT901 Pinout](#wt901-pinout)
 3. [WT901 IIC](#wt901-iic)
 4. [Quaternion to Euler](#conversion-from-quaternion-to-euler-angle)
+5. [WT901 Operation Environment](#wt901-operation-environment)
 
 ## 2022-02-07 Finding Parts
 
@@ -49,7 +50,7 @@ The chip uses the `RX` and `TX` pins to communicate with outside with UART proto
 
 Testing image
 
-![WT901_UART](WT901_UART.jpg)
+![WT901 UART](WT901_UART.jpg)
 
 The chip can also use the `SCL` and `SDA` pins to communicate with outside with IIC protocol. IIC communication is possible, but the script depends on Arduino right now since it is hard to find and use USB to IIC devices.
 
@@ -61,13 +62,13 @@ The chip can also use the `SCL` and `SDA` pins to communicate with outside with 
 
 Testing image
 
-![WT901_IIC](WT901_IIC.jpg)
+![WT901 IIC](WT901_IIC.jpg)
 
 In testing, a Arduino Nano acts like a bridge between computer and WT901 chip.
 
 Thoughts about choosing embedded processor
 
-- A less powerful embedded processor may be used other than STM32F427 at initial thought, the processing of data is not to heavy, even Arduino Nano can handle a few.
+- A less powerful embedded processor may be used other than STM32F427 at initial thought, the processing of data is not too heavy, even Arduino Nano can handle a few.
 - The processor should have ability to communicate through IIC (for WT901), PWM (for vibration motor and LED), and UART (for communicating with bluetooth chip).
 
 ### Conversion from quaternion to Euler angle
@@ -78,3 +79,21 @@ Source [Wikipedia](https://en.wikipedia.org/wiki/Conversion_between_quaternions_
     float roll = atan2(2 * (q0 * q1 + q2 * q3), 1 - 2 * (pow(q1, 2) + pow(q2, 2)));
     float pitch = asin(2 * (q0 * q2 - q3 * q1));
     float yaw = atan2(2 * (q0 * q3 + q1 * q2), 1 - 2 * (pow(q2, 2) + pow(q3, 2)));
+
+### Using IIC to communicate with two WT901s
+
+Use two WT901s connected to IIC interface through a really long 4-wire ([V+, GND, SDA, SCL]) to test the chip feedback data. One of the chips has IIC device address `0x50`, while the other one have IIC device address `0x52` as labeled in the testing diagram.
+
+Testing image
+
+![WT901 IIC two devices](WT901_IIC_two_device.jpg)
+
+The two devices can respond to IIC inquiries, and they return meaningful data. Testing code is modified to suit usage of multiple chips.
+
+### WT901 Operation Environment
+
+- The chips should be placed away from any magnetic field source (except for Earth's magnetic field of course...). For the magnetometers to stay functional.
+
+  - It should be at least 30cm away from any soft-iron.
+  - It should be at least 50cm away from motors.
+  - To be added...
