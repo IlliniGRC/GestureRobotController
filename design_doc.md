@@ -12,11 +12,11 @@ Traditionally, different robots are controlled by their specialized controller f
 
 ### High-level requirements list
 
-The first one is that the controller mounted on the user would be able to read the sensors placed on the body of the user and calculate the position of different body parts of the user and broadcast through Bluetooth.
+The first one is that the controller mounted on the user would be able to read data from inertial measurement unit (IMU)s placed on fingers and wrists, calculate the relative positions and Euler angles (with L2 errors less than 3% in 1 minute) of different body parts of the user in the reference of wrists, and then broadcast through Bluetooth. The total delay for this part should be less than 20ms.
 
-The second one is that it would enable the gestures and movements of the user to be translated to actual robot controlling actions through a software running on a powerful device (like PC) after receiving data using Bluetooth, and it would also have the capability of commanding the robot using another Bluetooth link.
+The second one is that it would recognize the current gesture in database with error rate less than 5% within 30ms on a powerful device like PC from data collected from controller (which can be done through algorithm or trained neural network), and then send the corresponding robot command to the controlled robot through Bluetooth. The total delay for this part should be less than 30ms.
 
-The third one is that it would be able to transmit the warnings of robots to signals that can be sensed by humans through actuators placed on the user, like lights (LEDs), vibration motors, and buzzers.
+The third one is that it would be able to receive the feedback information from robot through Bluetooth and display it to actuators on the gloves like lights (LEDs), vibration motors, and buzzers, so users can directly feel the current state of robot and decide the next command gesture based on that. The total delay for this part should be less than 20ms.
 
 ## 2. Design
 
