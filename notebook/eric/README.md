@@ -13,6 +13,8 @@
 3. [WT901 IIC](#wt901-iic)
 4. [Quaternion to Euler](#conversion-from-quaternion-to-euler-angle)
 5. [WT901 Operation Environment](#wt901-operation-environment)
+6. [3.7V to 5V Step-up Circuit](#37v-to-5v-step-up-circuit)
+6. [3.7V to 5V Step-up Circuit](#37v-to-5v-step-up-circuit)
 
 ## 2022-02-07 Finding Parts
 
@@ -138,8 +140,18 @@ I choose the second one for now, but it might subject to change during the devel
 
 The system is subject to change after we can get the actual chips and able to test them. The USB-to-UART system might be changed if that is too complex to be figured out.
 
-#### 3.7V to 5V Step-up Circuit
+### 3.7V to 5V Step-up Circuit
 
 ![3V7 to 5V](3V7to5VStepup.jpg)
+
+Output to the MCP1663 chip is $\rm V_{FB}$, under proper configuration, the port will deliver a voltage of minimum: 1.190V, typical: 1.227V, maximum: 1.264V, which will then pass through a inverse voltage divider to boost up the voltage to around $1.227V * \frac{1.05M\Omega + 330k\Omega}{330\Omega} \approx 5.131V$, which will be then used to power he whole circuit.
+
+MCP1663 provides a EN port to control the on/off of the device, a SPDT is attached to the port to select the working condition of the chip.
+
+**WARNING**: The circuit design is based on MCP1640 originally, but that chip is out of stock in the whole America. MCP1663 is a replacement, but it is not specialized in converting 3.3V to 5V, rather 3.3V to 12V. The circuit is adapted to suit the current usage, but might not work as expected.
+
+### MCP1663 Datasheet
+
+[MCP1663 Datasheet](https://ww1.microchip.com/downloads/en/DeviceDoc/20005406A.pdf)
 
 ### ESP32 auto-program circuit
