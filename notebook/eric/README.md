@@ -4,6 +4,7 @@
 
 1. [Week 2022-02-07 Finding parts](#2022-02-07-finding-parts)
 2. [Week 2022-02-14 Testing Wit-Motion WT901](#2022-02-14-testing-wit-motion-wt901)
+3. [Week 2022-03-07 Designing PCB](#2022-03-07-designing-pcb)
 
 ## 2022-02-07 Finding Parts
 
@@ -44,3 +45,46 @@ In testing, a Arduino Nano acts like a bridge between computer and WT901 chip.
 
 - A less powerful embedded processor may be used other than STM32F427 at initial thought, the processing of data is not to heavy, even Arduino Nano can handle a few.
 - The processor should have ability to communicate through IIC (for WT901), PWM (for vibration motor and LED), and UART (for communicating with bluetooth chip).
+
+## 2022-03-07 Designing PCB
+
+### Type of embedded CPU used
+
+There are two possibilities proposed. First one is use ATMega328P-PU as the main processor, and the other one is using ESP32-WROOM-32D as the main processor. The advantages (+) and disadvantages (-) are listed below for these two processors.
+
+ATMega328P-PU V.S. ESP32-WROOM-32D
+
+- \+ Simple and easier to design a PCB board around. We decided to use a 28DIP package CPU for the ATMega328, since it will be easier when it comes to both designing and soldering the PCB, and it enables us to take the chip out when in situation needed (e.g. flash bootloader, unit testing hardware, etc.)
+- \+ Team members are more familiar with this because we have used Arduino boards before. ATMega328P is the exact chip that are used on Arduino UNO and Arduino Nano.
+- \- Have less capability of handling calculations, the CPU clock frequency of the ATMega328P is 16MHz (one of the datasheet I found says 20MHz). But it does not matter since the ESP32 can be running at a maximum frequency of 240MHz.
+- \- Have less flash size. ATMega328 CPUs usually have a internal flash of 32KB, while the
+ESP32 modules have 512KB. This is a huge difference, as when I was writing the test program for driving the SSD1306 OLED display, the driver code will take about 16KB of flash memory, about half of the available space on a ATMega328.
+- \- ESP32 chips have built-in WIFI and Bluetooth capability. If an ATMega328 CPU is used, external Bluetooth transceiver will be used either through UART or SPI, which will decrease the efficiency of the system.
+
+The final decision is that I will design two different PCBs, one for the ATMega328, and another one for the ESP32.
+
+Due to the limited internal flash memory available for ATMega328 chips, two processors are required. One is for querying the IMUs and sending out data, and the other one is in charge of running the OLED, buttons, and actuators that belongs to the feedback system. The two chips will communicate through the SPI interface, because there is no other available interfaces on ATMega328 can be used to deliver messages efficiently.
+
+The design that uses ESP32 chip also use two ESP32 modules. It is influenced by the ATMega328 design, the two chips will still divide the jobs into two parts and each one of the processor do its job. However in this case, the two modules are more powerful, and no external Bluetooth modules are needed because both of them have the ability of communication via wireless link using internal hardwares. The communication between the two chips will be using UART instead of SPI for communication since the duplex communication is generally easier when implemented using UART compared to SPI.
+
+### Power system
+
+The power system of two designs of the chips are basically the same, despite the fact that the ATMega328P chips need an input voltage of 5V while the ESP32-WROOM-32D modules only need 3.3V as input voltage. It is because we are trying to use a USB-to-UART chip that operates on 5V input voltage. The name of the chip series is FT232, and we want FT232RL in particular since that is easier to be soldered onto the PCB surface.
+
+The power system have to step-up and regulate the input voltage of the Li-ion battery (about 3.7V $\pm$ 0.3V) to 5V, then supply the FT232RL chip with 5V. So far the designs are the same for both parts.
+
+The next part is supplying voltage to embedded CPUs. With ATmega328, we can directly supply the 5V directly, but for ESP32, we have several choices.
+
+- Because the FT232 chip have a output pin that supplies 3.3V, we can directly power the ESP32 modules using this pin. However, ESP32 chips are known to be hungry in power, and our application will need it to use it full capability, which the FT232 might not have the ability to handle that current.
+- Step down the 5V voltage we have stepped up from the Li-ion battery to 3.3V to power the system.
+- Build another regulator that connect to the Li-ion battery directly, step-down and regulate the voltage to 3.3V
+
+I choose the second one for now, but it might subject to change during the development stage.
+
+The system is subject to change after we can get the actual chips and able to test them. The USB-to-UART system might be changed if that is too complex to be figured out.
+
+#### 3.7V to 5V Step-up Circuit
+
+![3V7 to 5V](3V7to5VStepup.jpg)
+
+### ESP32 auto-program circuit
