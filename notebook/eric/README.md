@@ -6,7 +6,17 @@
 2. [Week 2022-02-14 Testing Wit-Motion WT901](#2022-02-14-testing-wit-motion-wt901)
 3. [Week 2022-03-07 Designing PCB](#2022-03-07-designing-pcb)
 
+## Important Notes
+
+1. [WT901 Manual & Data Sheet](#wt901-manual-and-data-sheet)
+2. [WT901 Pinout](#wt901-pinout)
+3. [WT901 IIC](#wt901-iic)
+4. [Quaternion to Euler](#conversion-from-quaternion-to-euler-angle)
+5. [WT901 Operation Environment](#wt901-operation-environment)
+
 ## 2022-02-07 Finding Parts
+
+([Back to top](#eric-worklog))
 
 Finding available IMUs
 
@@ -24,27 +34,72 @@ Questions to ask:
 
 ## 2022-02-14 Testing Wit-Motion WT901
 
+([Back to top](#eric-worklog))
+
+### WT901 Manual and Data Sheet
+
 - [WT901 Manual](https://github.com/WITMOTION/WT901/blob/master/WT901%20Manual.pdf)
 - [WT901 DataSheet](https://github.com/WITMOTION/WT901/blob/master/WT901%20Datasheet.pdf)
 
-The chip have following configuration ![WT901 Chip](WT901_chip.png)
+### WT901 Pinout
+
+![WT901 Chip](WT901_chip.png)
 
 **Notice:** The chip uses 5V input voltage, using 3.3V as source voltage might cause IIC communication failure.
 
 The chip uses the `RX` and `TX` pins to communicate with outside with UART protocol. Reading from the sensor through UART is now possible using a naive `uart_read.py` script. Although the IMU have other data to read, now only attempting to read Euler angles and quaternions only.
 
-Testing image ![WT901_UART](WT901_UART.jpg)
+Testing image
 
-The chip can also use the `SCL` and `SDA` pins to communicate with outside with IIC protocol.IIC communication is also possible, but the script depends on Arduino right now since it is hard to find and use USB to IIC devices.
+![WT901 UART](WT901_UART.jpg)
 
-**Notice:** Pull-up resistors are needed on `SCL` and `SDA` pins as the documentation specifies because IIC pins are open-drain. ![WT901 IIC_config](WT901_IIC_config.png)
+The chip can also use the `SCL` and `SDA` pins to communicate with outside with IIC protocol. IIC communication is possible, but the script depends on Arduino right now since it is hard to find and use USB to IIC devices.
 
-Testing image ![WT901_IIC](WT901_IIC.jpg)
+### WT901 IIC
+
+**Notice:** Pull-up resistors are needed on `SCL` and `SDA` pins as the documentation specifies because IIC pins are open-drain.
+
+![WT901 IIC_config](WT901_IIC_config.png)
+
+Testing image
+
+![WT901 IIC](WT901_IIC.jpg)
 
 In testing, a Arduino Nano acts like a bridge between computer and WT901 chip.
 
-- A less powerful embedded processor may be used other than STM32F427 at initial thought, the processing of data is not to heavy, even Arduino Nano can handle a few.
+Thoughts about choosing embedded processor
+
+- A less powerful embedded processor may be used other than STM32F427 at initial thought, the processing of data is not too heavy, even Arduino Nano can handle a few.
 - The processor should have ability to communicate through IIC (for WT901), PWM (for vibration motor and LED), and UART (for communicating with bluetooth chip).
+
+### Conversion from quaternion to Euler angle
+
+Source [Wikipedia](https://en.wikipedia.org/wiki/Conversion_between_quaternions_and_Euler_angles#:~:text=cy%3B%0A%0A%20%20%20%20return%20q%3B%0A%7D-,Quaternion%20to%20Euler%20angles%20conversion,-%5Bedit%5D)
+
+    // All angles in radian
+    float roll = atan2(2 * (q0 * q1 + q2 * q3), 1 - 2 * (pow(q1, 2) + pow(q2, 2)));
+    float pitch = asin(2 * (q0 * q2 - q3 * q1));
+    float yaw = atan2(2 * (q0 * q3 + q1 * q2), 1 - 2 * (pow(q2, 2) + pow(q3, 2)));
+
+### Using IIC to communicate with two WT901s
+
+Use two WT901s connected to IIC interface through a extremely long 4-wire ([V+, GND, SDA, SCL]) to test the chip feedback data. This is done to simulated the scenario where the IMUs are mounted on human body.
+
+One of the chips has IIC device address `0x50`, while the other one have IIC device address `0x52` as labeled in the testing diagram.
+
+Testing image
+
+![WT901 IIC two devices](WT901_IIC_two_devices.jpg)
+
+The two devices can respond to IIC inquiries, and they return meaningful data. Testing code is modified to suit usage of multiple chips.
+
+### WT901 Operation Environment
+
+- The chips should be placed away from any magnetic field source (except for Earth's magnetic field of course...). For the magnetometers to stay functional.
+
+  - It should be at least 30cm away from any soft-iron.
+  - It should be at least 50cm away from motors.
+  - To be added...
 
 ## 2022-03-07 Designing PCB
 
