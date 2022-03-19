@@ -14,7 +14,7 @@
 4. [Quaternion to Euler](#conversion-from-quaternion-to-euler-angle)
 5. [WT901 Operation Environment](#wt901-operation-environment)
 6. [3.7V to 5V Step-up Circuit](#37v-to-5v-step-up-circuit)
-6. [3.7V to 5V Step-up Circuit](#37v-to-5v-step-up-circuit)
+7. [MCP1663 Datasheet](#mcp1663-datasheet)
 
 ## 2022-02-07 Finding Parts
 
