@@ -1,6 +1,6 @@
 import machine, _thread, time
 
-from driver.ssd1306 import SSD1306
+import driver.utils as utils
 from driver.display import Drawing, OLED
 from driver.uart import UART
 from driver.status_led import StatusLed
@@ -8,6 +8,7 @@ from driver.threading import ThreadSafeQueue
 from driver.io import Button, PWMOutput, VibrationMotor
 
 from functionality.menu import Menu
+from functionality.config import Config
 
 def uart1_rx_callback() -> None:
   """ Callback function that called every time uart1 receieved message(s) """
@@ -70,7 +71,9 @@ class Board:
     """ Initializations that fulfill full requirements for system to operate """
     Drawing.auxiliary_init()
     PWMOutput.auxiliary_init()
+    
     Menu.auxiliary_init()
+    Config.auxiliary_init()
     
     cls.uart1 = UART(1, tx = 18, rx = 17)
     cls.uart1.register_rx_callback(uart1_rx_callback)
@@ -196,8 +199,9 @@ class Board:
 
   @classmethod
   def user_keyboard_input(cls, display: OLED) -> str:
-    """ Display keyboard to the user on given display, expect user to input one character 
-        `display`: the OLED for the menu to be displayed on """
+    """ Helpper function, display keyboard to the user on given display, expect user to input 
+        one character. Will clear screen on confirm or cancel, will not reset keyboard highlight
+        `display`: the OLED for keyboard to be displayed on """
     choice_idx = cls.display_menu_and_get_choice(Menu.keyboard, display, -1, undisplay=False)
     ret = Menu.keyboard_sequence[choice_idx]
     if ret == '\x06' or ret == '\x18':
@@ -206,23 +210,33 @@ class Board:
     return ret
 
   @classmethod
-  def display_keyboard_and_get_input(cls, display: OLED, title: str, title_x_offset: int=0) -> str:
+  def display_keyboard_and_get_input(cls, display: OLED, title: str, title_x_offset: int=0,
+      initial_string: str="", initial_key: str="Q") -> str:
     """ Display keyboard to the user on given display, expecting user to use on-board buttons 
         to input character sequences. Sequences are directly reflected onto the specified display,
         return the character sequence after user finished inputing, blocking 
-        `display`: the OLED for the menu to be displayed on
+        `display`: the OLED for keyboard to be displayed on
         `title`: title to be displayed when prompting user for keyboard input
-        `title_x_offset`: x offset of the title to be displayed """
+        `title_x_offset`: x offset of the title to be displayed 
+        `initial_string`: initial string displayed at start of input session
+        `initial_key`: default key the keyboard is on at start of input session """
     # internal parameters
     title_y_offset = 3
     ustring_x_offset = 10
     ustring_y_offset = 13
     ustring_max_len = 14
 
+    initial_string, initial_key = initial_string.upper(), initial_key.upper()
+    utils.ASSERT_TRUE(len(initial_string) <= ustring_max_len, 
+        f"Keyboard input preset sequence <{initial_string}> exceed maximum length {ustring_max_len}")
+    utils.ASSERT_TRUE(len(initial_key) == 1 and initial_key in Menu.keyboard_sequence,
+        f"Keyboard input preset key <{initial_key}> not in available keyboard list")
+
     display_direct = display.get_direct_control()
     display_direct.text(title, title_x_offset, title_y_offset, 1)
 
-    user_string = ""
+    user_string = initial_string
+    Menu.keyboard.change_highlight(Menu.keyboard_sequence.index(initial_key))
 
     while True:
       display_direct.fill_rect(0, ustring_y_offset, 128, OLED.CHAR_HEIGHT, 0)
