@@ -1,4 +1,4 @@
-import machine, _thread, time
+import machine, _thread, time, gc
 
 import driver.utils as utils
 from driver.display import Drawing, OLED
@@ -9,6 +9,7 @@ from driver.io import Button, PWMOutput, VibrationMotor
 
 from functionality.menu import Menu
 from functionality.config import Config
+from functionality.text_viewer import TextViewer
 
 def uart1_rx_callback() -> None:
   """ Callback function that called every time uart1 receieved message(s) """
@@ -51,6 +52,9 @@ class Board:
   vmotor = None
   buzzer = None
 
+  # text viewer
+  text_viewer = None
+
   @classmethod
   def main_init(cls) -> None:
     """ Initializations that fulfill basic requirements for system to operate """
@@ -87,6 +91,8 @@ class Board:
 
     cls.vmotor = VibrationMotor(22)
     # pwm23 reserved for buzzer
+
+    cls.text_viewer = TextViewer()
 
   @classmethod
   def begin_operation(cls) -> None:
@@ -260,5 +266,37 @@ class Board:
 
     display_direct.fill(0)
     display_direct.show()
+    gc.collect()
     return user_string
 
+  @classmethod
+  def begin_text_viewer(cls, display: OLED, text: str, 
+      wrap_content:bool=True, delimiter: str="\n") -> None:
+    cls.text_viewer.set_text_to_view(text, wrap_content, delimiter)
+
+    display.lock.acquire()
+    display.get_direct_control().fill(0)
+    display.lock.release()
+    cls.text_viewer.view_on_display(display)
+    
+    while True:
+      if Board.is_button_pending():
+        message = Board.get_button_message()
+        if message == Board.BUTTON1:
+          cls.text_viewer.PNE_menu_rotate(Menu.CHANGE_PREV)
+        elif message == Board.BUTTON3:
+          cls.text_viewer.PNE_menu_rotate(Menu.CHANGE_NEXT)
+        elif message == Board.BUTTON2:
+          should_exit = cls.text_viewer.PNE_menu_choose()
+          if should_exit:
+            break
+
+        display.lock.acquire()
+        display.get_direct_control().fill(0)
+        display.lock.release()
+        cls.text_viewer.view_on_display(display)
+      
+      time.sleep_ms(50)
+    
+    display.clear_screen()
+    gc.collect()

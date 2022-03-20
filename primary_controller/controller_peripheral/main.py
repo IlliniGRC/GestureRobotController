@@ -55,7 +55,7 @@ def main():
         current_menu = Menu.main_menu
 
     elif current_menu == Menu.settings_menu:
-      choice_idx = Board.display_menu_and_get_choice(current_menu, Board.main_display, 0)
+      choice_idx = Board.display_menu_and_get_choice(current_menu, Board.main_display, -1)
 
       if choice_idx == 0: # Load Config
         current_menu = Menu.settings_menu
@@ -69,6 +69,8 @@ def main():
           current_menu = Menu.settings_menu
 
       elif choice_idx == 2: # View Config
+        with open("main.py", "r") as f:
+          Board.begin_text_viewer(Board.main_display, f.read(), True, "\r\n")
         current_menu = Menu.settings_menu
       elif choice_idx == 3: # Back
         current_menu = Menu.main_menu
