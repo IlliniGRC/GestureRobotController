@@ -4,6 +4,7 @@ from driver.display import OLED
 import gc
 
 class Menu:
+  """ Simplifies the creation and displaying of menus and special menus (e.g. keyboard) """
   # rotate choice
   CHANGE_NEXT = 0
   CHANGE_PREV = 1
@@ -16,7 +17,7 @@ class Menu:
   #   \x08 backspace \x06 confirm \x18 cancel
   keyboard_sequence = "QWERTYUIOP-ASDFGHJKL_ZXCVBNM\x08\x06\x18"
   
-  # generaic menus
+  # generic menus
   YN_menu = None  # Yes No
   YCN_menu = None # Yes Cancel No
   RQ_menu = None  # Restart Quit
@@ -69,13 +70,22 @@ class Menu:
     cls.B_menu.add_choice(1, 1, ["Back"])
 
   class _MenuItem:
+    """ An item of the menu """
+    # alignment methods for multi-line choice
     ALIGN_LEFT   = 0x0
     ALIGN_MIDDLE = 0x1
     ALIGN_RIGHT  = 0x2
     
-    def __init__(self, x: int, y: int, texts: list, align: int, boarder_width: int) -> None:
-      utils.ASSERT_TRUE(x >= boarder_width and x < OLED.WIDTH - boarder_width, "Menu invalid start x")
-      utils.ASSERT_TRUE(y >= boarder_width and y < OLED.HEIGHT - boarder_width, "Menu invalid start y")
+    def __init__(self, x: int, y: int, texts: list, align: int, border_width: int) -> None:
+      """ Create one menu item using following properties
+          `x`: horizontal offset of the choice on the screen
+          `y`: vertical offset of the choice on the screen 
+          `texts`: displayed texts of the choice, must be a list containing items as lines
+          `align`: alignment methods for multi-line choice
+          `border_width`: width of highlight boarder when the choice is highlighted """
+      utils.ASSERT_TRUE(x >= border_width and x < OLED.WIDTH - border_width, "Menu invalid start x")
+      utils.ASSERT_TRUE(y >= border_width and y < OLED.HEIGHT - border_width, "Menu invalid start y")
+      utils.ASSERT_TRUE(type(texts) == list, "Menu tests must be list")
       utils.ASSERT_TRUE(align >= self.ALIGN_LEFT and align <= self.ALIGN_RIGHT, "Menu invalid alignment")
       self.x = x
       self.y = y
@@ -84,10 +94,10 @@ class Menu:
       self.text_height = len(texts) * OLED.CHAR_HEIGHT
       self.horizontal_offset = [0 for _ in range(len(texts))]
 
-      self.highlight_x = self.x - boarder_width
-      self.highlight_y = self.y - boarder_width
-      self.highlight_width = self.text_width + 2 * boarder_width
-      self.highlight_height = self.text_height + 2 * boarder_width
+      self.highlight_x = self.x - border_width
+      self.highlight_y = self.y - border_width
+      self.highlight_width = self.text_width + 2 * border_width
+      self.highlight_height = self.text_height + 2 * border_width
       
       for i in range(len(texts)):
         text = self.texts[i]
@@ -99,93 +109,131 @@ class Menu:
           self.horizontal_offset[i] = (self.text_width - len(text) * OLED.CHAR_WIDTH) // 2
 
   def __init__(self) -> None:
+    """ Create an empty menu """
     self.__choices = []
-    self.__highlight_idx = 0
-    self.__visiable_idxs = set()
+    self.__highlight_index = 0
+    self.__visible_indexes = set()
     self.__x_offset = 0
     self.__y_offset = 0
     
   def change_x_offset(self, new_x: int) -> None:
+    """ Change the horizontal offset of the whole menu """
     self.__x_offset = new_x
 
   def change_y_offset(self, new_y: int) -> None:
+    """ Change the vertical offset of the whole menu """
     self.__y_offset = new_y
 
   def add_choice(self, x: int, y: int, texts: list, align: int=_MenuItem.ALIGN_MIDDLE, 
-      boarder_width: int=1) -> None:
-    self.__visiable_idxs.add(len(self.__choices))
-    self.__choices.append(Menu._MenuItem(x, y, texts, align, boarder_width))
+      border_width: int=1) -> None:
+    """ Append a new choice to the end of menu
+        `x`: horizontal offset of the choice on the screen
+        `y`: vertical offset of the choice on the screen 
+        `texts`: displayed texts of the choice, must be a list containing items as lines
+        `align`: alignment methods for multi-line choice
+        `border_width`: width of highlight boarder when the choice is highlighted """
+    self.__visible_indexes.add(len(self.__choices))
+    self.__choices.append(Menu._MenuItem(x, y, texts, align, border_width))
 
-  def replace_choice(self, idx, x: int, y: int, texts: list, align: int=_MenuItem.ALIGN_MIDDLE, 
-      boarder_width: int=1) -> None:
+  def replace_choice(self, idx: int, x: int, y: int, texts: list, align: int=_MenuItem.ALIGN_MIDDLE, 
+      border_width: int=1) -> None:
+    """ Replace the choice at given index of the menu to a new choice
+        `idx`: the destinated index of the menu item wished to be replaced
+        `x`: horizontal offset of the choice on the screen
+        `y`: vertical offset of the choice on the screen 
+        `texts`: displayed texts of the choice, must be a list containing items as lines
+        `align`: alignment methods for multi-line choice
+        `border_width`: width of highlight boarder when the choice is highlighted """
     utils.ASSERT_TRUE(idx >= 0 and idx < len(self.__choices), "Menu invalid replace index")
-    self.__choices[idx] = Menu._MenuItem(x, y, texts, align, boarder_width)
+    self.__choices[idx] = Menu._MenuItem(x, y, texts, align, border_width)
     gc.collect()
 
-  def insert_choice(self, idx, x: int, y: int, texts: list, align: int=_MenuItem.ALIGN_MIDDLE, 
-      boarder_width: int=1) -> int:
+  def insert_choice(self, idx: int, x: int, y: int, texts: list, align: int=_MenuItem.ALIGN_MIDDLE, 
+      border_width: int=1) -> int:
+    """ Insert the choice at given index of the menu to a new choice
+        `idx`: the destinated index of the menu item wished to be inserted
+        `x`: horizontal offset of the choice on the screen
+        `y`: vertical offset of the choice on the screen 
+        `texts`: displayed texts of the choice, must be a list containing items as lines
+        `align`: alignment methods for multi-line choice
+        `border_width`: width of highlight boarder when the choice is highlighted """
     utils.ASSERT_TRUE(idx >= 0 and idx <= len(self.__choices), "Menu invalid insert index")
-    new_item = Menu._MenuItem(x, y, texts, align, boarder_width)
+    new_item = Menu._MenuItem(x, y, texts, align, border_width)
     self.__choices.insert(idx, new_item)
     real_idx = self.__choices.index(new_item)
-    self.__visiable_idxs = set([i if i < real_idx else i + 1 for i in self.__visiable_idxs])
-    self.__visiable_idxs.add(real_idx)
-    if real_idx < self.__highlight_idx:
-      self.__highlight_idx += 1
+    self.__visible_indexes = set([i if i < real_idx else i + 1 for i in self.__visible_indexes])
+    self.__visible_indexes.add(real_idx)
+    if real_idx < self.__highlight_index:
+      self.__highlight_index += 1
     return real_idx
 
-  def remove_choice(self, idx) -> _MenuItem:
+  def remove_choice(self, idx: int) -> _MenuItem:
+    """ Remove the choice at given index of the menu to a new choice
+        `idx`: the destinated index of the menu item wished to be removed
+        Notice: If successfully removed, all menu items that have higher index number than the 
+        removed one will have their index reduced by one """
     utils.ASSERT_TRUE(idx >= 0 and idx < len(self.__choices), "Menu invalid change index")
-    self.__visiable_idxs = set([i if i < idx else i - 1 for i in self.__visiable_idxs])
-    self.__visiable_idxs.discard(idx)
-    if idx < self.__highlight_idx:
-      self.__highlight_idx -= 1
+    self.__visible_indexes = set([i if i < idx else i - 1 for i in self.__visible_indexes])
+    self.__visible_indexes.discard(idx)
+    if idx < self.__highlight_index:
+      self.__highlight_index -= 1
     gc.collect()
     return self.__choices.pop(idx)
 
-  def change_choice_visability(self, idx: int, visability: bool) -> None:
+  def change_choice_visibility(self, idx: int, visible: bool) -> None:
+    """ Change the visibility of a choice at given index of the menu
+        `idx`: the destinated index of the menu item wished its visibility to be changed 
+        `visible`: if the menu item is visible """
     if idx >= 0 and idx < len(self.__choices):
-      if visability:
-        self.__visiable_idxs.add(idx)
+      if visible:
+        self.__visible_indexes.add(idx)
       else:
-        self.__visiable_idxs.discard(idx)
+        self.__visible_indexes.discard(idx)
     else:
-      utils.EXPECT_TRUE(False, "Menu invalid change visability index")
+      utils.EXPECT_TRUE(False, "Menu invalid change visibility index")
 
-  def display_choices(self, display: OLED, redraw_undisplayed_choice: bool=True) -> None:
+  def display_choices(self, display: OLED, redraw_invisible_choices: bool=True) -> None:
+    """ Display all choices on given display
+        `display`: the destinated index of the menu item wished its visibility to be changed 
+        `redraw_invisible_choice`: if the invisible items needed to be redrawn as invisible """
     utils.ASSERT_TRUE(len(self.__choices) != 0, "Menu empty")
-    utils.ASSERT_TRUE(len(self.__visiable_idxs) != 0, "Menu display choices empty")
-    if self.__highlight_idx not in self.__visiable_idxs:
+    utils.ASSERT_TRUE(len(self.__visible_indexes) != 0, "Menu display choices empty")
+    if self.__highlight_index not in self.__visible_indexes:
       utils.EXPECT_TRUE(False, "Menu invalid choice")
       # no good choice of indexing sets
-      self.__highlight_idx = self.__visiable_idxs.pop()
-      self.__visiable_idxs.add(self.__highlight_idx)
+      self.__highlight_index = self.__visible_indexes.pop()
+      self.__visible_indexes.add(self.__highlight_index)
 
     display.lock.acquire()
     display_direct = display.get_direct_control()
     for idx in range(len(self.__choices)):
       choice: Menu._MenuItem = self.__choices[idx]
-      if idx == self.__highlight_idx:
+      if idx == self.__highlight_index:
         continue
-      elif idx in self.__visiable_idxs:
+      elif idx in self.__visible_indexes:
         self.__display_single_choice(display_direct, choice)
       else:
-        if redraw_undisplayed_choice:
+        if redraw_invisible_choices:
           display_direct.fill_rect(choice.highlight_x, choice.highlight_y, 
               choice.highlight_width, choice.highlight_height, 0)
-    self.__display_single_choice(display_direct, self.__choices[self.__highlight_idx], highlight=True)
+    self.__display_single_choice(display_direct, self.__choices[self.__highlight_index], highlight=True)
     display_direct.show()
     display.lock.release()
 
-  def undisplay_choices(self, display: OLED, redraw_undisplayed_choice: bool=True, reset_offsets: bool=True) -> None:
+  def undisplay_choices(self, display: OLED, redraw_invisible_choices: bool=True, 
+      reset_offsets: bool=True) -> None:
+    """ Display all choices on given display
+        `display`: the destinated index of the menu item wished its visibility to be changed 
+        `redraw_invisible_choice`: if the invisible items needed to be redrawn as invisible 
+        `reset_offsets`: reset the offsets of the menu to zero """
     display.lock.acquire()
     display_direct = display.get_direct_control()
     for idx in range(len(self.__choices)):
       choice: Menu._MenuItem = self.__choices[idx]
-      if idx == self.__highlight_idx or idx in self.__visiable_idxs:
+      if idx == self.__highlight_index or idx in self.__visible_indexes:
         self.__display_single_choice_background(display_direct, choice, 0)
       else:
-        if redraw_undisplayed_choice:
+        if redraw_invisible_choices:
           self.__display_single_choice_background(display_direct, choice, 0)
     display_direct.show()
     display.lock.release()
@@ -194,34 +242,47 @@ class Menu:
       self.__y_offset = 0
 
   def rotate_highlight(self, direction: int) -> int:
-    utils.EXPECT_TRUE(direction == Menu.CHANGE_NEXT or direction == Menu.CHANGE_PREV, "Menu invalid change direction")
+    """ Rotate the hightlight option using direction specified
+        `direction`: either Menu.CHANGE_PREV or Menu.CHANGE_NEXT
+        `returns`: current choice index that is highlighted """
+    utils.EXPECT_TRUE(direction == Menu.CHANGE_NEXT or direction == Menu.CHANGE_PREV, 
+        "Menu invalid change direction")
     l = len(self.__choices)
     step = l - 1 if direction == Menu.CHANGE_PREV else 1
-    self.__highlight_idx = (self.__highlight_idx + step) % l
-    while self.__highlight_idx not in self.__visiable_idxs:
-      self.__highlight_idx = (self.__highlight_idx + step) % l
-    return self.__highlight_idx
+    self.__highlight_index = (self.__highlight_index + step) % l
+    while self.__highlight_index not in self.__visible_indexes:
+      self.__highlight_index = (self.__highlight_index + step) % l
+    return self.__highlight_index
 
-  def change_highlight(self, idx: int) -> int:
+  def change_highlight(self, idx: int) -> None:
+    """ Change the hightlight option using index specified
+        `index`: index of the menu item wished to be highlighted """
     utils.ASSERT_TRUE(idx in range(len(self.__choices)), "Menu invalid change highlight, not in choices")
-    utils.EXPECT_TRUE(idx in self.__visiable_idxs, "Menu invalid change hightlight, not in visiablie choices")
-    self.__highlight_idx = idx
-    return self.__highlight_idx
+    utils.EXPECT_TRUE(idx in self.__visible_indexes, "Menu invalid change hightlight, not in visible choices")
+    self.__highlight_index = idx
 
   def choose(self, reset_idx: int=-1) -> int:
-    ret = self.__highlight_idx
+    """ Choose the current highlighted choice and return the index of that choice in the menu
+        `reset_idx`: index of the menu item wished to be highlighted after selection, -1 if non-restoring """
+    ret = self.__highlight_index
     if reset_idx != -1:
       self.change_highlight(reset_idx)
     return ret
 
-  def __display_single_choice_background(self, display_direct: SSD1306, 
-      choice: _MenuItem, color: int) -> None:
+  def __display_single_choice_background(self, display_direct: SSD1306, choice: _MenuItem, color: int) -> None:
+    """ Display the background for the specified choice 
+        `display_direct`: the display framebuffer to draw on 
+        `choice`: the choice to be rendered
+        `color`: color of background """
     x = self.__x_offset + choice.highlight_x
     y = self.__y_offset + choice.highlight_y
     display_direct.fill_rect(x, y, choice.highlight_width, choice.highlight_height, color)
 
-  def __display_single_choice(self, display_direct: SSD1306, 
-      choice: _MenuItem, highlight: bool=False) -> None:
+  def __display_single_choice(self, display_direct: SSD1306, choice: _MenuItem, highlight: bool=False) -> None:
+    """ Display the specified choice 
+        `display_direct`: the display framebuffer to draw on 
+        `choice`: the choice to be rendered
+        `highlight`: if the choice is highlighted """
     self.__display_single_choice_background(display_direct, choice, int(highlight))
     for i in range(len(choice.texts)):
       x = self.__x_offset + choice.x + choice.horizontal_offset[i]
@@ -229,8 +290,9 @@ class Menu:
       display_direct.text(choice.texts[i], x, y, int(not highlight))
 
   def print_status(self) -> None:
+    """ Report status of current menu, for debug use """
     print(f"No. of Choices: {len(self.__choices)}")
-    print(f"Visiable Choices: {self.__visiable_idxs}")
-    print(f"Highlight: {self.__highlight_idx}")
+    print(f"Visible Choices: {self.__visible_indexes}")
+    print(f"Highlight: {self.__highlight_index}")
     for i, choice in enumerate(self.__choices):
       print(f" Choice: {i}, X: {choice.x}, Y: {choice.y}, Texts: {choice.texts}")

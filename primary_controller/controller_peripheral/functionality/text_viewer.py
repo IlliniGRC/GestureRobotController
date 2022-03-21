@@ -20,13 +20,13 @@ class TextViewer:
     self.__total_pages = 0
 
   def __reset_PNE_menu(self) -> None:
-    self.__PNE_menu.change_choice_visability(0, False)
-    self.__PNE_menu.change_choice_visability(1, True)
+    self.__PNE_menu.change_choice_visibility(0, False)
+    self.__PNE_menu.change_choice_visibility(1, True)
     self.__PNE_menu.change_highlight(1)
 
   def __set_PNE_menu_zero_or_one_page(self) -> None:
-    self.__PNE_menu.change_choice_visability(0, False)
-    self.__PNE_menu.change_choice_visability(1, False)
+    self.__PNE_menu.change_choice_visibility(0, False)
+    self.__PNE_menu.change_choice_visibility(1, False)
     self.__PNE_menu.change_highlight(2)
 
   def __get_page_num_display(self) -> tuple:
@@ -87,9 +87,9 @@ class TextViewer:
     if self.__total_pages <= 1 or self.__current_page == self.__total_pages - 1:
       return
     if self.__current_page == 0:
-      self.__PNE_menu.change_choice_visability(0, True)
+      self.__PNE_menu.change_choice_visibility(0, True)
     elif self.__current_page == self.__total_pages - 2:
-      self.__PNE_menu.change_choice_visability(1, False)
+      self.__PNE_menu.change_choice_visibility(1, False)
       self.__PNE_menu.change_highlight(0)
     self.__current_page += 1
       
@@ -97,9 +97,9 @@ class TextViewer:
     if self.__total_pages <= 1 or self.__current_page == 0:
       return
     if self.__current_page == self.__total_pages - 1:
-      self.__PNE_menu.change_choice_visability(1, True)
+      self.__PNE_menu.change_choice_visibility(1, True)
     elif self.__current_page == 1:
-      self.__PNE_menu.change_choice_visability(0, False)
+      self.__PNE_menu.change_choice_visibility(0, False)
       self.__PNE_menu.change_highlight(1)
     self.__current_page -= 1
       
