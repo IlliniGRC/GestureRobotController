@@ -141,7 +141,7 @@ class OLED:
     return ret
 
   def __wait_for_quit_signal(self) -> None:
-    """ Wait fot the quit signal to be asserted, blocking. Quit singal will be reseted. 
+    """ Wait fot the quit signal to be asserted, blocking. Quit singal will be reset. 
         Should NOT be called"""
     while True:
       if not self.__quit_signal_lock.acquire(False):
@@ -175,7 +175,7 @@ class OLED:
         `buffer`: the framebuffer to be displayed onto the screen
         `position`: display offset relative to left-top corner of screen, in the form of (x, y)
         `inverse`: invert the color of the buffer before display
-        `timeout_s`: maximum time to wait before aquiring control of the screen """
+        `timeout_s`: maximum time to wait before acquiring control of the screen """
     if not self.lock.acquire(True, timeout_s):
       return False
 
@@ -188,14 +188,14 @@ class OLED:
     self.lock.release()
   
   def get_direct_control(self) -> SSD1306:
-    """ Get the direct control of the SSD1306, useful when need delicated drawings 
+    """ Get the direct control of the SSD1306, useful when need dedicated drawings 
         `returns`: the SSD1306"""
     return self.__ssd1306
 
   def display_test_screen(self, ms: int = 500, timeout_s: float = -1) -> bool:
     """ Display test screen containing lots of "Hello World"s
         `ms`: display update interval
-        `timeout_s`: maximum time to wait before aquiring control of the screen """
+        `timeout_s`: maximum time to wait before acquiring control of the screen """
     if not self.lock.acquire(True, timeout_s):
       return False
     
@@ -216,7 +216,7 @@ class OLED:
   def display_random_lines(self, line_cnt: int = 5, ms: int = 500, timeout_s: float = -1) -> bool:
     """ Display random lines on the screen
         `ms`: display update interval
-        `timeout_s`: maximum time to wait before aquiring control of the screen """
+        `timeout_s`: maximum time to wait before acquiring control of the screen """
     if not self.lock.acquire(True, timeout_s):
       return False
 

@@ -17,14 +17,14 @@ class Button:
     """ Initialize a new button using GPIO id
         `id`: id of the GPIO the button is on """
     utils.ASSERT_TRUE(id not in Button.button_pins, "Button already initialized with this pin")
-    utils.ASSERT_TRUE(id in Button.pull_up_avail_pins, "Button GPIO does not support pullup")
+    utils.ASSERT_TRUE(id in Button.pull_up_avail_pins, "Button GPIO does not support pull-up")
     self.__id = id
     Button.button_pins.append(self.__id)
     self.__pin = machine.Pin(id, machine.Pin.IN, machine.Pin.PULL_UP)
   
   def begin(self, pressed_callback, debounce_delay_ms: int = 13.5) -> None:
     """ Set the button into triggering mode, every time the button is pressed, callback is called
-        `pressed_callback`: callback funciton called when the button is pressed,
+        `pressed_callback`: callback function called when the button is pressed,
         `debounce_delay_ms`: software debounce delay time, default value is optimum """
     self.__rx_callback = pressed_callback
     self.__last_debounce_time = time.time_ns()

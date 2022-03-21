@@ -54,7 +54,7 @@ class ThreadSafeQueue:
     return ret
 
   def clear(self) -> None:
-    """ Clear the queue without erasing contents, only head / tail pointers are reseted"""
+    """ Clear the queue without erasing contents, only head / tail pointers are reset """
     self.__lock.acquire()
     self.__start = 0
     self.__end = 0
@@ -84,7 +84,7 @@ class Thread:
     _thread.start_new_thread(self.__thread_wrapper, args, kwargs)
 
   def __thread_wrapper(self, *args: tuple, **kwargs: dict) -> None:
-    """ Wrapper funtion that used to retrieve properties corresponding to the thread.
+    """ Wrapper function that used to retrieve properties corresponding to the thread.
         Should NOT be called """
     Thread.thread_pool_lock.acquire()
     # get identifier of thread and add itself to thread pool using that identifier

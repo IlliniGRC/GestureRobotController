@@ -12,7 +12,7 @@ class UART:
         `id`: id of the UART instance
         `tx`: GPIO pin number for the UART TX pin
         `rx`: GPIO pin number for the UART RX pin
-        `buadrate`: baudrate of the UART transmission """
+        `baudrate`: baudrate of the UART transmission """
     self.__tx = tx
     self.__rx = rx
     utils.ASSERT_TRUE(self.__tx != None and self.__rx != None, "UART TX and RX pins must be specified")
@@ -39,8 +39,8 @@ class UART:
     self.__quit_signal = True
 
   def register_rx_callback(self, callback_func) -> None:
-    """ Register a callback funciton that get called when there is pending UART message
-        `callback_func`: callback funciton to be registered """
+    """ Register a callback function that get called when there is pending UART message
+        `callback_func`: callback function to be registered """
     self.__rx_callback = callback_func
 
   def get_uart_buffer(self) -> ThreadSafeQueue:

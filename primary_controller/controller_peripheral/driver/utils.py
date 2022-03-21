@@ -10,7 +10,7 @@ start_screen_exit_sig = None # If start screen have exited
 def execute_main(func, start_screen: bool = True) -> None:
   """ Execute the main function, call all the main_init functions before running the main thread
       `start_screen`: whether the start screen animation is played"""
-  # main initilizations
+  # main initializations
   Board.main_init()
 
   # display start screen if needed

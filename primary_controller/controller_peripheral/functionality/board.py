@@ -13,7 +13,7 @@ from functionality.config import Config
 from functionality.text_viewer import TextViewer
 
 def uart1_rx_callback() -> None:
-  """ Callback function that called every time uart1 receieved message(s) """
+  """ Callback function that called every time uart1 received message(s) """
   Board.uart1_pending_lock.acquire()
   Board.uart1_pending = True
   Board.uart1_pending_lock.release()
@@ -82,7 +82,7 @@ class Board:
     
     cls.uart1 = UART(1, tx = 18, rx = 17)
     cls.uart1.register_rx_callback(uart1_rx_callback)
-    # uart begin eariler for receieving message from Main
+    # uart begin earlier for receiving message from Main
     cls.uart1_queue = cls.uart1.begin()
     
     cls.button25 = Button(25)
@@ -118,11 +118,11 @@ class Board:
     """ Get one of the pending uart message
         `returns`: first pending uart message, None if no pending messages """
     cls.uart1_pending_lock.acquire()
-    messasge = cls.uart1_queue.dequeue()
+    message = cls.uart1_queue.dequeue()
     if cls.uart1_queue.is_empty():
       cls.uart1_pending = False
     cls.uart1_pending_lock.release()
-    return messasge
+    return message
 
   @classmethod
   def get_all_uart1_message(cls) -> list:
@@ -147,11 +147,11 @@ class Board:
     """ Get one of the pending button pressing event
         `returns`: first pending button GPIO number, None if no pending pressing event """
     cls.button_pending_lock.acquire()
-    messasge = cls.button_queue.dequeue()
+    message = cls.button_queue.dequeue()
     if cls.button_queue.is_empty():
       cls.button_pending = False
     cls.button_pending_lock.release()
-    return messasge
+    return message
 
   @classmethod
   def get_all_button_message(cls) -> list:
