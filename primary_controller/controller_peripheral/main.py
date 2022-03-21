@@ -3,7 +3,6 @@ import driver.utils as utils
 
 from functionality.board import Board
 from functionality.menu import Menu
-from functionality.snake import begin_snake_game
 
 # controls if start screen should be shown
 show_start_screen = True
@@ -51,7 +50,7 @@ def main():
       elif choice_idx == 1: # Settings
         current_menu = Menu.settings_menu
       elif choice_idx == 2: # Snake
-        begin_snake_game(Board.main_display)
+        Board.begin_snake_game(Board.main_display)
         current_menu = Menu.main_menu
 
     elif current_menu == Menu.settings_menu:

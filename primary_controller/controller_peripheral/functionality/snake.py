@@ -1,8 +1,8 @@
-import random, time
+import random
+
 import driver.utils as utils
 from driver.display import OLED
-from functionality.board import Board
-from functionality.menu import Menu
+from driver.io import VibrationMotor
 
 class SnakeGame:
   class _SnakeBody:
@@ -80,13 +80,13 @@ class SnakeGame:
     self.__display_direct = display.get_direct_control()
     self.display_pixel(self.__food_x, self.__food_y, 1)
     self.display_boarder()
-    self.display_update()
+    self.__display_direct.show()
     
 
   def generate_food(self) -> tuple:
     return (random.randrange(self.__board_width), random.randrange(self.__board_height))
 
-  def update(self) -> bool:
+  def update(self, vmotor: VibrationMotor=None) -> bool:
     next_x, next_y = self.__snake_body.get_head()
     if self.__dir == SnakeGame.dir_up:
       next_y -= 1
@@ -103,15 +103,17 @@ class SnakeGame:
       buf_len = self.__snake_body.buffer_len
       score = (self.__snake_body.head_idx + buf_len - self.__snake_body.tail_idx) % buf_len
       self.game_over(score)
+      if vmotor != None:
+        vmotor.heavy_vibration()
       return False
 
-      
     if next_x == self.__food_x and next_y == self.__food_y:
       self.__snake_body.extend_length()
       self.__food_x, self.__food_y = self.generate_food()
       while self.__snake_body.collide_with_body(self.__food_x, self.__food_y):
         self.__food_x, self.__food_y = self.generate_food()
-      Board.vibrate(1)
+      if vmotor != None:
+        vmotor.slight_vibration()
 
     undisplay = self.__snake_body.step_forward(next_x, next_y)
 
@@ -120,7 +122,7 @@ class SnakeGame:
     self.display_pixel(self.__food_x, self.__food_y, 1)
     if undisplay != None:
       self.display_pixel(undisplay[0], undisplay[1], 0)
-    self.display_update()
+    self.__display_direct.show()
     self.__display.lock.release()
 
     self.__direction_changed = False
@@ -140,18 +142,17 @@ class SnakeGame:
 
   def game_over(self, score: int) -> None:
     self.display_game_over(score)
-    self.display_update()
-    Board.vibrate(3)
+    self.__display_direct.show()
 
   def restart(self, init_x, init_y) -> None:
     self.__dir = SnakeGame.dir_up
     self.__snake_body.reset(init_x, init_y)
     self.__direction_changed = False
     self.__food_x, self.__food_y = self.generate_food()
-    Board.main_display.clear_screen()
+    self.__display_direct.fill(0)
     self.display_pixel(self.__food_x, self.__food_y, 1)
     self.display_boarder()
-    self.display_update()
+    self.__display_direct.show()
 
   def display_boarder(self):
     l = self.__x_offset - 1
@@ -169,44 +170,3 @@ class SnakeGame:
   def display_game_over(self, score: int):
     self.__display_direct.text("GAME OVER", 28, 16)
     self.__display_direct.text(f"Score: {score}", 28, 28)
-
-  def display_update(self):
-    self.__display_direct.show()
-
-
-def begin_snake_game(display: OLED) -> None:
-  init_x, init_y = 29, 29
-  game = SnakeGame(display, init_x, init_y)
-  while snake_game(game):
-    game.restart(init_x, init_y)
-  display.clear_screen()
-  
-def snake_game(game: SnakeGame) -> bool:
-  while game.update():
-    if Board.is_button_pending():
-      button_message = Board.get_button_message()
-      if button_message == 25:
-        game.rotate_anticlockwise()
-      if button_message == 27:
-        game.rotate_clockwise()
-    time.sleep_ms(90)
-
-  Menu.RQ_menu.change_y_offset(39)
-  Menu.RQ_menu.display_choices(Board.main_display)
-  while True:
-    # BUTTON
-    if Board.is_button_pending():
-      message = Board.get_button_message()
-      if message == Board.BUTTON1:
-        Menu.RQ_menu.rotate_highlight(Menu.CHANGE_PREV)
-      elif message == Board.BUTTON3:
-        Menu.RQ_menu.rotate_highlight(Menu.CHANGE_NEXT)
-      elif message == Board.BUTTON2:
-        choice_idx = Menu.RQ_menu.choose(0)
-        break
-      Menu.RQ_menu.display_choices(Board.main_display)
-
-    time.sleep_ms(10)
-
-  Menu.RQ_menu.undisplay_choices(Board.main_display)
-  return choice_idx == 0

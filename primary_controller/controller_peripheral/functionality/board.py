@@ -8,6 +8,7 @@ from driver.threading import ThreadSafeQueue
 from driver.io import Button, PWMOutput, VibrationMotor
 
 from functionality.menu import Menu
+from functionality.snake import SnakeGame
 from functionality.config import Config
 from functionality.text_viewer import TextViewer
 
@@ -176,6 +177,47 @@ class Board:
       cls.vmotor.heavy_vibration()
 
   @classmethod
+  def begin_snake_game(cls, display: OLED) -> None:
+    gc.collect()
+    init_x, init_y = 29, 29
+    game = SnakeGame(display, init_x, init_y)
+    while cls.snake_game(game):
+      game.restart(init_x, init_y)
+    display.clear_screen()
+    gc.collect()
+    
+  @classmethod
+  def snake_game(cls, game: SnakeGame) -> bool:
+    while game.update(cls.vmotor):
+      if Board.is_button_pending():
+        button_message = Board.get_button_message()
+        if button_message == 25:
+          game.rotate_anticlockwise()
+        if button_message == 27:
+          game.rotate_clockwise()
+      time.sleep_ms(90)
+
+    Menu.RQ_menu.change_y_offset(39)
+    Menu.RQ_menu.display_choices(Board.main_display)
+    while True:
+      # BUTTON
+      if Board.is_button_pending():
+        message = Board.get_button_message()
+        if message == Board.BUTTON1:
+          Menu.RQ_menu.rotate_highlight(Menu.CHANGE_PREV)
+        elif message == Board.BUTTON3:
+          Menu.RQ_menu.rotate_highlight(Menu.CHANGE_NEXT)
+        elif message == Board.BUTTON2:
+          choice_idx = Menu.RQ_menu.choose(0)
+          break
+        Menu.RQ_menu.display_choices(Board.main_display)
+
+      time.sleep_ms(10)
+
+    Menu.RQ_menu.undisplay_choices(Board.main_display)
+    return choice_idx == 0
+
+  @classmethod
   def display_menu_and_get_choice(cls, menu: Menu, display: OLED, 
       reset_idx: int=-1, undisplay: bool=True) -> int:
     """ Display given menu on given display, expecting user to use on-board buttons
@@ -185,6 +227,7 @@ class Board:
         `display`: the OLED for the menu to be displayed on
         `reset_idx`: index of choice to be highlighted after choosing, -1 if no need to reset
         `undisplay`: undisplay the choices after choosing """
+    gc.collect()
     menu.display_choices(display)
     choice_idx = -1
     while True:
@@ -201,6 +244,7 @@ class Board:
       time.sleep_ms(50)
     if undisplay:
       menu.undisplay_choices(display)
+    gc.collect()
     return choice_idx
 
   @classmethod
@@ -232,6 +276,7 @@ class Board:
     ustring_y_offset = 13
     ustring_max_len = 14
 
+    gc.collect()
     initial_string, initial_key = initial_string.upper(), initial_key.upper()
     utils.ASSERT_TRUE(len(initial_string) <= ustring_max_len, 
         f"Keyboard input preset sequence <{initial_string}> exceed maximum length {ustring_max_len}")
@@ -272,8 +317,8 @@ class Board:
   @classmethod
   def begin_text_viewer(cls, display: OLED, text: str, 
       wrap_content:bool=True, delimiter: str="\n") -> None:
+    gc.collect()
     cls.text_viewer.set_text_to_view(text, wrap_content, delimiter)
-
     display.lock.acquire()
     display.get_direct_control().fill(0)
     display.lock.release()
