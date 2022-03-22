@@ -25,8 +25,8 @@ class Config:
   # {
   #   <VERSION_NAME> : <VERSION>
   #   <IMU_BY_POSITION_NAME> : {
-  #     <IMU_XXX_NAME> : # IIC address
-  #     <IMU_XXX_NAME> : # IIC address
+  #     <IMU_XXX_NAME> : # I2C address
+  #     <IMU_XXX_NAME> : # I2C address
   #     ...
   #   }
   # }
@@ -112,9 +112,9 @@ class Config:
     self.__associative_file_name = filename
     return True
 
-  def add_imu_to_config(self, imu_pos: str, iic_addr: int) -> None:
+  def add_imu_to_config(self, imu_pos: str, i2c_addr: int) -> None:
     utils.ASSERT_TRUE(imu_pos in Config.IMU_AVAIL_POSITIONS, f"Config invalid imu position name {imu_pos}")
-    self.__imu_dict[imu_pos] = iic_addr
+    self.__imu_dict[imu_pos] = i2c_addr
 
   def print_config(self) -> None:
     print(self.__imu_dict)

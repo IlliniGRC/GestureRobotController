@@ -318,9 +318,13 @@ class Board:
   def begin_text_viewer(cls, display: OLED, text: str, 
       wrap_content:bool=True, delimiter: str="\n") -> None:
     gc.collect()
-    cls.text_viewer.set_text_to_view(text, wrap_content, delimiter)
+    display_direct = display.get_direct_control()
     display.lock.acquire()
-    display.get_direct_control().fill(0)
+    display_direct.fill(0)
+    display_direct.text("Loading...", 24, 28, 1)
+    display_direct.show()
+    cls.text_viewer.set_text_to_view(text, wrap_content, delimiter)
+    display_direct.fill(0)
     display.lock.release()
     cls.text_viewer.view_on_display(display)
     

@@ -111,16 +111,16 @@ class Drawing:
 
 
 class OLED:
-  """ Drives the SSD1306 OLED using IIC, async operation supported """
-  IIC_ADDR = (0x3C, ) # all available IIC address that SSD1306 can be on
+  """ Drives the SSD1306 OLED using I2C, async operation supported """
+  I2C_ADDR = (0x3C, 0x3D) # all available I2C address that SSD1306 can be on
   WIDTH, HEIGHT = 128, 64 # dimension of the screen
   CHAR_WIDTH, CHAR_HEIGHT = 8, 8 # dimension of character on the screen
   INVERSE_PALETTE = framebuf.FrameBuffer(bytearray([1, 0]), 1, 2, framebuf.MONO_VLSB) # palette used to invert display
   
   def __init__(self, addr: int = 0x3C) -> None:
-    """ Create an OLED instance using given IIC address
-        `addr`: IIC address of the SSD1306"""
-    utils.ASSERT_TRUE(addr in OLED.IIC_ADDR, "Invalid OLED IIC address")
+    """ Create an OLED instance using given I2C address
+        `addr`: I2C address of the SSD1306"""
+    utils.ASSERT_TRUE(addr in OLED.I2C_ADDR, "Invalid OLED I2C address")
     self.__i2c = machine.SoftI2C(sda = machine.Pin(4), scl = machine.Pin(5))
     self.__ssd1306 = SSD1306_I2C(OLED.WIDTH, OLED.HEIGHT, self.__i2c, addr)
     self.__quit_signal = False
