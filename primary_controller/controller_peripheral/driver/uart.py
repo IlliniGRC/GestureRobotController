@@ -30,9 +30,15 @@ class UART:
     utils.ASSERT_TRUE(self.__queue == None, "UART duplicated begin")
     self.__queue = ThreadSafeQueue(queue_size)
     self.__timer = machine.Timer(utils.UART_TIMER_ID)
-    # polling is used as callback is fired periodically using harware timer
+    # polling is used as callback is fired periodically using hardware timer
     self.__timer.init(mode=machine.Timer.PERIODIC, period=200, callback=self.__rx_polling)
     return self.__queue
+
+  def send(self, *buffers: str) -> None:
+    """ Send given buffer using uart with delimiters (\\n) in between
+        `*buffers`: buffers to be sent """
+    for buffer in buffers:
+      self.__uart.write(buffer + "\n")
 
   def finish(self) -> None:
     """ Stops the operation of the UART """
@@ -56,7 +62,7 @@ class UART:
     if message == None:
       return
     while message != None:
-      self.__queue.enqueue(message)
+      self.__queue.enqueue(message.strip())
       message = self.__uart.readline()
     if self.__rx_callback != None:
       self.__rx_callback()
