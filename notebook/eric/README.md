@@ -4,6 +4,7 @@
 
 1. [Week 2022-02-07 Finding parts](#2022-02-07-finding-parts)
 2. [Week 2022-02-14 Testing Wit-Motion WT901](#2022-02-14-testing-wit-motion-wt901)
+3. [Week 2022-03-07 Designing PCB](#2022-03-07-designing-pcb)
 
 ## Important Notes
 
@@ -12,6 +13,10 @@
 3. [WT901 IIC](#wt901-iic)
 4. [Quaternion to Euler](#conversion-from-quaternion-to-euler-angle)
 5. [WT901 Operation Environment](#wt901-operation-environment)
+6. [3.7V to 5V Step-up Circuit](#37v-to-5v-step-up-circuit)
+7. [MCP1663 Datasheet](#mcp1663-datasheet)
+8. [ESP32 Download Mode and Auto-program Circuit](#esp32-download-mode-and-auto-program-circuit)
+9. [Image to Binary Image Converter](#image-to-binary-image-converter)
 
 ## 2022-02-07 Finding Parts
 
@@ -88,7 +93,7 @@ One of the chips has IIC device address `0x50`, while the other one have IIC dev
 
 Testing image
 
-![WT901 IIC two devices](WT901_IIC_two_device.jpg)
+![WT901 IIC two devices](WT901_IIC_two_devices.jpg)
 
 The two devices can respond to IIC inquiries, and they return meaningful data. Testing code is modified to suit usage of multiple chips.
 
@@ -99,3 +104,88 @@ The two devices can respond to IIC inquiries, and they return meaningful data. T
   - It should be at least 30cm away from any soft-iron.
   - It should be at least 50cm away from motors.
   - To be added...
+
+## 2022-03-07 Designing PCB
+
+### Type of embedded CPU used
+
+There are two possibilities proposed. First one is use ATMega328P-PU as the main processor, and the other one is using ESP32-WROOM-32D as the main processor. The advantages (+) and disadvantages (-) are listed below for these two processors.
+
+ATMega328P-PU V.S. ESP32-WROOM-32D
+
+- \+ Simple and easier to design a PCB board around. We decided to use a 28DIP package CPU for the ATMega328, since it will be easier when it comes to both designing and soldering the PCB, and it enables us to take the chip out when in situation needed (e.g. flash bootloader, unit testing hardware, etc.)
+- \+ Team members are more familiar with this because we have used Arduino boards before. ATMega328P is the exact chip that are used on Arduino UNO and Arduino Nano.
+- \- Have less capability of handling calculations, the CPU clock frequency of the ATMega328P is 16MHz (one of the datasheet I found says 20MHz). But it does not matter since the ESP32 can be running at a maximum frequency of 240MHz.
+- \- Have less flash size. ATMega328 CPUs usually have a internal flash of 32KB, while the
+ESP32 modules have 512KB. This is a huge difference, as when I was writing the test program for driving the SSD1306 OLED display, the driver code will take about 16KB of flash memory, about half of the available space on a ATMega328.
+- \- ESP32 chips have built-in WIFI and Bluetooth capability. If an ATMega328 CPU is used, external Bluetooth transceiver will be used either through UART or SPI, which will decrease the efficiency of the system.
+
+The final decision is that I will design two different PCBs, one for the ATMega328, and another one for the ESP32.
+
+Due to the limited internal flash memory available for ATMega328 chips, two processors are required. One is for querying the IMUs and sending out data, and the other one is in charge of running the OLED, buttons, and actuators that belongs to the feedback system. The two chips will communicate through the SPI interface, because there is no other available interfaces on ATMega328 can be used to deliver messages efficiently.
+
+The design that uses ESP32 chip also use two ESP32 modules. It is influenced by the ATMega328 design, the two chips will still divide the jobs into two parts and each one of the processor do its job. However in this case, the two modules are more powerful, and no external Bluetooth modules are needed because both of them have the ability of communication via wireless link using internal hardwares. The communication between the two chips will be using UART instead of SPI for communication since the duplex communication is generally easier when implemented using UART compared to SPI.
+
+### Power system
+
+The power system of two designs of the chips are basically the same, despite the fact that the ATMega328P chips need an input voltage of 5V while the ESP32-WROOM-32D modules only need 3.3V as input voltage. It is because we are trying to use a USB-to-UART chip that operates on 5V input voltage. The name of the chip series is FT232, and we want FT232RL in particular since that is easier to be soldered onto the PCB surface.
+
+The power system have to step-up and regulate the input voltage of the Li-ion battery (about 3.7V $\pm$ 0.3V) to 5V, then supply the FT232RL chip with 5V. So far the designs are the same for both parts.
+
+The next part is supplying voltage to embedded CPUs. With ATmega328, we can directly supply the 5V directly, but for ESP32, we have several choices.
+
+- Because the FT232 chip have a output pin that supplies 3.3V, we can directly power the ESP32 modules using this pin. However, ESP32 chips are known to be hungry in power, and our application will need it to use it full capability, which the FT232 might not have the ability to handle that current.
+- Step down the 5V voltage we have stepped up from the Li-ion battery to 3.3V to power the system.
+- Build another regulator that connect to the Li-ion battery directly, step-down and regulate the voltage to 3.3V
+
+I choose the second one for now, but it might subject to change during the development stage.
+
+The system is subject to change after we can get the actual chips and able to test them. The USB-to-UART system might be changed if that is too complex to be figured out.
+
+### 3.7V to 5V Step-up Circuit
+
+![3V7 to 5V](3V7to5VStepup.jpg)
+
+Output to the MCP1663 chip is $\rm V_{FB}$, under proper configuration, the port will deliver a voltage of minimum: 1.190V, typical: 1.227V, maximum: 1.264V, which will then pass through a inverse voltage divider to boost up the voltage to around $1.227V * \frac{1.05M\Omega + 330k\Omega}{330\Omega} \approx 5.131V$, which will be then used to power he whole circuit.
+
+MCP1663 provides a EN port to control the on/off of the device, a SPDT is attached to the port to select the working condition of the chip.
+
+**WARNING**: The circuit design is based on MCP1640 originally, but that chip is out of stock in the whole America. MCP1663 is a replacement, but it is not specialized in converting 3.3V to 5V, rather 3.3V to 12V. The circuit is adapted to suit the current usage, but might not work as expected.
+
+### MCP1663 Datasheet
+
+[MCP1663 Datasheet](https://ww1.microchip.com/downloads/en/DeviceDoc/20005406A.pdf)
+
+### ESP32 Download Mode and Auto-program Circuit
+
+ESP32 have a native mode for the controller to be in a "download" mode, in which it receives subsequent bytes sent out to the controller the data to a file, then it will write 
+First pressing the `IO0` button, then press the `EN` button without releasing the `IO` button, then subsequently releasing `EN` and `IO0` button. This will drop you into download mode, and for a micropython firmware, ESP32 module should print to the command line as follows:
+
+    rst:0x1 (POWERON_RESET),boot:0x7 (DOWNLOAD_BOOT(UART0/UART1/SDIO_REI_REO_V2))
+    waiting for download
+
+However, this method involves manually pressing the buttons on the board, making the process lengthy and repetitive, so auto program circuit is there to help users avoid this repetitive process.
+
+ESP32 development boards often have a circuit consists of two BJT or MOSFET transistors and several resistors which is named "auto-program circuit". It is done using two outputs from the USB-to-UART chip, `DTR` and `RTS`.
+
+`DTR` stands for "Data Terminal Ready" and `RTS` stands for "Request to Send". For ESP32 to be auto-programed, the `DTR` is set to 1 first, then `RTS` will be set to 1, followed by an immediate set back to 0, then `DTR` also set back to zero. Also, for the circuit to receive a reset command from the chip, the RST can be brought down to zero individually. 
+
+So overall, for doing this automatically, a circuit need to be constructed with a truth table as follows.
+
+| DTR | RTS | RST | IO0 |
+| --- | --- | --- | --- |
+|  1  |  1  |  1  |  1  |
+|  0  |  0  |  1  |  1  |
+|  1  |  0  |  0  |  1  |
+|  0  |  1  |  1  |  0  |
+
+(Notice that in the ESP32 module, the `RST` and `IO0` are active high signals)
+
+The ESP32 development boards on the market right now are using UART-to-USB chips such as CP2102 or CH340. However, those two chips are not suitable for our design. As CP2102 does not provide a IC with easy-to-solder package, and CH340 is not available anywhere on the market. So we have to use a FT232RL for the propose. There is another problem with the FR232RL, is that the output pins `DTR` and `RTS` are inverted, while all the reference design I can find online are with CP2102, which have its `DTR` and `RTS` pins not inverted. Finally after a deep search on how to use FT232 for this propose, I came across this post, which is a design for CH340 chips. [Reference to a CH340 design](https://electronics.stackexchange.com/questions/448187/esp32-with-ftdi-programmer). Similar to FT232RL, CH340 also have its `DTR` and `RTS` pins inverted, making it the perfect reference design for a auto-program circuit with FT232.
+
+![CH340 Auto-program Circuit](CH340AutoProgram.jpg)
+
+### Image to Binary Image Converter
+
+Useful when trying to create custom logos that would be displayed on the SSD1306.
+[Image to binary image converter](https://www.dcode.fr/binary-image?__r=1.f155588443de719d03c97616d360cfb7)
