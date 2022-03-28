@@ -15,6 +15,8 @@
 5. [WT901 Operation Environment](#wt901-operation-environment)
 6. [3.7V to 5V Step-up Circuit](#37v-to-5v-step-up-circuit)
 7. [MCP1663 Datasheet](#mcp1663-datasheet)
+8. [ESP32 Download Mode and Auto-program Circuit](#esp32-download-mode-and-auto-program-circuit)
+9. [Image to Binary Image Converter](#image-to-binary-image-converter)
 
 ## 2022-02-07 Finding Parts
 
@@ -154,4 +156,36 @@ MCP1663 provides a EN port to control the on/off of the device, a SPDT is attach
 
 [MCP1663 Datasheet](https://ww1.microchip.com/downloads/en/DeviceDoc/20005406A.pdf)
 
-### ESP32 auto-program circuit
+### ESP32 Download Mode and Auto-program Circuit
+
+ESP32 have a native mode for the controller to be in a "download" mode, in which it receives subsequent bytes sent out to the controller the data to a file, then it will write 
+First pressing the `IO0` button, then press the `EN` button without releasing the `IO` button, then subsequently releasing `EN` and `IO0` button. This will drop you into download mode, and for a micropython firmware, ESP32 module should print to the command line as follows:
+
+    rst:0x1 (POWERON_RESET),boot:0x7 (DOWNLOAD_BOOT(UART0/UART1/SDIO_REI_REO_V2))
+    waiting for download
+
+However, this method involves manually pressing the buttons on the board, making the process lengthy and repetitive, so auto program circuit is there to help users avoid this repetitive process.
+
+ESP32 development boards often have a circuit consists of two BJT or MOSFET transistors and several resistors which is named "auto-program circuit". It is done using two outputs from the USB-to-UART chip, `DTR` and `RTS`.
+
+`DTR` stands for "Data Terminal Ready" and `RTS` stands for "Request to Send". For ESP32 to be auto-programed, the `DTR` is set to 1 first, then `RTS` will be set to 1, followed by an immediate set back to 0, then `DTR` also set back to zero. Also, for the circuit to receive a reset command from the chip, the RST can be brought down to zero individually. 
+
+So overall, for doing this automatically, a circuit need to be constructed with a truth table as follows.
+
+| DTR | RTS | RST | IO0 |
+| --- | --- | --- | --- |
+|  1  |  1  |  1  |  1  |
+|  0  |  0  |  1  |  1  |
+|  1  |  0  |  0  |  1  |
+|  0  |  1  |  1  |  0  |
+
+(Notice that in the ESP32 module, the `RST` and `IO0` are active high signals)
+
+The ESP32 development boards on the market right now are using UART-to-USB chips such as CP2102 or CH340. However, those two chips are not suitable for our design. As CP2102 does not provide a IC with easy-to-solder package, and CH340 is not available anywhere on the market. So we have to use a FT232RL for the propose. There is another problem with the FR232RL, is that the output pins `DTR` and `RTS` are inverted, while all the reference design I can find online are with CP2102, which have its `DTR` and `RTS` pins not inverted. Finally after a deep search on how to use FT232 for this propose, I came across this post, which is a design for CH340 chips. [Reference to a CH340 design](https://electronics.stackexchange.com/questions/448187/esp32-with-ftdi-programmer). Similar to FT232RL, CH340 also have its `DTR` and `RTS` pins inverted, making it the perfect reference design for a auto-program circuit with FT232.
+
+![CH340 Auto-program Circuit](CH340AutoProgram.jpg)
+
+### Image to Binary Image Converter
+
+Useful when trying to create custom logos that would be displayed on the SSD1306.
+[Image to binary image converter](https://www.dcode.fr/binary-image?__r=1.f155588443de719d03c97616d360cfb7)
