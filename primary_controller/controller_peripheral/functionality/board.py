@@ -5,7 +5,7 @@ from driver.display import Drawing, OLED
 from driver.uart import UART
 from driver.status_led import StatusLed
 from driver.threading import ThreadSafeQueue
-from driver.io import Button, PWMOutput, VibrationMotor
+from driver.io import Button, Buzzer, PWMOutput, VibrationMotor
 
 from functionality.menu import Menu
 from functionality.snake import SnakeGame
@@ -91,7 +91,7 @@ class Board:
     cls.button_queue = ThreadSafeQueue()
 
     cls.vmotor = VibrationMotor(22)
-    # pwm23 reserved for buzzer
+    cls.buzzer = Buzzer(23)
 
     cls.text_viewer = TextViewer()
 
@@ -164,17 +164,6 @@ class Board:
     cls.button_pending = False
     cls.button_pending_lock.release()
     return messages
-
-  @classmethod
-  def vibrate(cls, level: int) -> None:
-    """ Activate the vibration motor
-        `level`: level of vibration, 1: slight, 2: medium, 3: heavy """
-    if level == 1:
-      cls.vmotor.slight_vibration()
-    elif level == 2:
-      cls.vmotor.medium_vibration()
-    elif level == 3:
-      cls.vmotor.heavy_vibration()
 
   @classmethod
   def begin_snake_game(cls, display: OLED) -> None:

@@ -1,4 +1,4 @@
-import machine, _thread, time
+import machine, _thread, time, array
 
 import driver.utils as utils
 
@@ -44,6 +44,9 @@ class Button:
 
 class PWMOutput:
   """ Controls output devices that uses PWM output """
+  DUTY_MODE = 0
+  FREQ_MODE = 1
+
   class _Info:
     """ Internal class used to store PWM related variables """
     def __init__(self, size: int=50) -> None:
@@ -52,9 +55,9 @@ class PWMOutput:
       self.start = 0
       self.len = 0
       self.size = size
-      self.seq = bytearray(size)
+      self.seq = array.array('i', (0 for _ in range(size)))
     
-    def append(self, seq: bytearray) -> bool:
+    def append(self, seq: array.array) -> bool:
       """ Append sequence to the end of the internal buffer
           `seq`: sequence to be appended to the internal buffer """
       if self.size - self.len < len(seq):
@@ -84,7 +87,7 @@ class PWMOutput:
   @classmethod
   def auxiliary_init(cls, timer_period_ms: int=100) -> None:
     """ Initializations that fulfill full requirements for system to operate """
-    cls.timer = machine.Timer(utils.MOTOR_TIMER_ID)
+    cls.timer = machine.Timer(utils.PWM_OUT_TIMER_ID)
     cls.timer.init(mode=machine.Timer.PERIODIC, period=timer_period_ms, callback=PWMOutput.__update_callback)
 
   @classmethod
@@ -93,33 +96,49 @@ class PWMOutput:
         `timer`: timer instance that triggered the callback """
     cls.active_tasks_lock.acquire()
     for id in cls.active_tasks.keys():
-      motor, info = cls.active_tasks[id]
-      duty = info.dequeue()
-      if duty == -1:
+      pwm_pin, mode, info = cls.active_tasks[id]
+      val = info.dequeue()
+      if val == -1:
         continue
-      motor.change_duty_cycle(duty << 2)
+      if mode == cls.DUTY_MODE:
+        pwm_pin.change_duty_cycle(val)
+      elif mode == cls.FREQ_MODE:
+        print(val)
+        pwm_pin.change_frequency(val)
     cls.active_tasks_lock.release()
     
 
-  def __init__(self, id: int) -> None:
+  def __init__(self, id: int, mode: int, buf_size: int=50) -> None:
     """ Initialize a new PWM controlled output using GPIO id
         `id`: id of the GPIO wished to be controlled using PWM """
     utils.ASSERT_TRUE(id not in PWMOutput.active_tasks.keys(), f"Duplicate PWMOut on pin [{id}]")
+    utils.ASSERT_TRUE(mode == PWMOutput.DUTY_MODE or mode == PWMOutput.FREQ_MODE, f"Invalid PWMOut mode")
     self.__id = id
     self.__pin = machine.Pin(id, machine.Pin.OUT)
     self.__pwm = machine.PWM(self.__pin, freq=5000, duty=0)
-    PWMOutput.active_tasks[self.__id] = (self, PWMOutput._Info())
+    PWMOutput.active_tasks[self.__id] = (self, mode, PWMOutput._Info(buf_size))
+    print(self.__pwm)
 
   def change_duty_cycle(self, duty: int) -> None:
     """ Change the duty cycle of the PWM output 
         `duty`: int in range [0, 1024), representing a duty cycle of [duty / 1024] """
     self.__pwm.duty(duty)
 
+  def change_frequency(self, freq: int) -> None:
+    """ Change the duty cycle of the PWM output 
+        `freq`: destinated frequency """
+    self.__pwm.freq(freq)
+
 class VibrationMotor(PWMOutput):
   """ Class extends from PWMOutput that used to control vibration motor """
-  slight_seq = bytearray([102, 102,  0])
-  medium_seq = bytearray([102, 154, 154, 102,  0])
-  heavy_seq  = bytearray([102, 154, 205, 205, 205, 205, 154, 102, 0])
+  SEQ_END = 0
+  slight_seq = array.array('i', [410, 410,  SEQ_END])
+  medium_seq = array.array('i', [410, 615, 615, 410,  SEQ_END])
+  heavy_seq  = array.array('i', [410, 615, 819, 819, 819, 819, 615, 410, SEQ_END])
+
+  def __init__(self, id: int, buf_size: int = 50) -> None:
+    super().__init__(id, PWMOutput.DUTY_MODE, buf_size)
+    self.__pwm.duty(0)
 
   def slight_vibration(self) -> None:
     """ Vibration motor slightly vibrates, non-blocking """
@@ -133,14 +152,50 @@ class VibrationMotor(PWMOutput):
     """ Vibration motor heavily vibrates, non-blocking """
     self.custom_vibration(VibrationMotor.heavy_seq)
 
-  def custom_vibration(self, seq: bytearray) -> bool:
+  def custom_vibration(self, seq: array.array) -> bool:
     """ Command the vibration motor using user defined sequence 
-        `seq`: user defined sequence, should be a bytearray, each of the entry is in the range
+        `seq`: user defined sequence, should be a integer array, each of the entry is in the range
             [0, 256), representing a duty cycle of [entry / 1024]. each of the entry represents
             the vibration strength in consecutive 100ms period """
-    if seq[-1] != 0:
-      seq.append(0)
+    if seq[-1] != VibrationMotor.SEQ_END:
+      seq.append(VibrationMotor.SEQ_END)
     PWMOutput.active_tasks_lock.acquire()
-    ret = PWMOutput.active_tasks[self.__id][1].append(seq)
+    ret = PWMOutput.active_tasks[self.__id][2].append(seq)
+    PWMOutput.active_tasks_lock.release()
+    return ret
+
+class Buzzer(PWMOutput):
+  """ Note: Frequency less than or equal to 610 cannot make the buzzer correctly function"""
+  SEQ_END = 1
+  A =  array.array('i', [28, 55, 110, 220, 440, 880, 1760, 3520, 7040])
+  AB = array.array('i', [29, 55, 117, 233, 466, 932, 1865, 3729, 7459])
+  B =  array.array('i', [31, 58, 123, 247, 494, 988, 1976, 3951, 7902])
+  C =  array.array('i', [16, 33, 65, 131, 262, 523, 1047, 2093, 4186])
+  CD = array.array('i', [17, 35, 69, 139, 277, 554, 1109, 2217, 4435])
+  D =  array.array('i', [18, 37, 73, 147, 294, 587, 1175, 2349, 4699])
+  DE = array.array('i', [19, 39, 78, 156, 311, 622, 1245, 2489, 4978])
+  E =  array.array('i', [21, 41, 82, 165, 330, 659, 1319, 2637, 5274])
+  F =  array.array('i', [22, 44, 87, 175, 349, 698, 1397, 2794, 5588])
+  FG = array.array('i', [23, 46, 93, 185, 370, 740, 1480, 2960, 5920])
+  G =  array.array('i', [25, 49, 98, 196, 392, 784, 1568, 3136, 6272])
+  GA = array.array('i', [26, 52, 104, 208, 415, 831, 1661, 3322, 6645])
+
+  def __init__(self, id: int, buf_size: int = 500) -> None:
+    super().__init__(id, PWMOutput.FREQ_MODE, buf_size)
+    self.__pwm.freq(1)
+    self.__pwm.duty(200)
+
+  def sound_bootup(self) -> None:
+    self.custom_sound(array.array('i', [Buzzer.C[6], Buzzer.D[6], Buzzer.E[6], Buzzer.F[6], Buzzer.G[6]]))
+
+  def custom_sound(self, seq: array.array) -> None:
+    """ Command the vibration motor using user defined sequence 
+        `seq`: user defined sequence, should be a integer array, each of the entry is in the range
+            [0, 256), representing a duty cycle of [entry / 1024]. each of the entry represents
+            the vibration strength in consecutive 100ms period """
+    if seq[-1] != Buzzer.SEQ_END:
+      seq.append(Buzzer.SEQ_END)
+    PWMOutput.active_tasks_lock.acquire()
+    ret = PWMOutput.active_tasks[self.__id][2].append(seq)
     PWMOutput.active_tasks_lock.release()
     return ret

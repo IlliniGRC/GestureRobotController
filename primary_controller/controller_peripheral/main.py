@@ -9,8 +9,12 @@ show_start_screen = True
 
 def main():
   """ Main function, contains event loop """
+  Board.status_led.show_bootup()
+
   # auxiliary initializations
   Board.auxiliary_init()
+  Board.buzzer.sound_bootup()
+  Board.vmotor.slight_vibration()
 
   # wait for start screen to finish if not already
   while not utils.start_screen_exited():

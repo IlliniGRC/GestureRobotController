@@ -1,10 +1,10 @@
-import os, machine
+import os
 from functionality.board import Board
 from driver.threading import Thread
 
 # Timer IDs used by different utilities
 UART_TIMER_ID = 0
-MOTOR_TIMER_ID = 1
+PWM_OUT_TIMER_ID = 1
 
 start_screen_exit_sig = None # If start screen have exited
 def execute_main(func, start_screen: bool = True) -> None:
@@ -20,9 +20,6 @@ def execute_main(func, start_screen: bool = True) -> None:
     start_screen_exit_sig = False
     start_screen_thread = Thread(Board.main_display.display_start_screen)
     start_screen_thread.run()
-
-  # LED flash
-  Board.status_led.show_bootup()
 
   # execute main
   main_thread = Thread(func)

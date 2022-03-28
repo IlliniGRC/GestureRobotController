@@ -27,8 +27,8 @@ def main():
       messages = Board.get_all_uart1_message()
       print(f"UART: {messages}")
 
-    print(f"50: {imu0x50.get_angle()}", end="")
-    print(f"52: {imu0x52.get_angle()}")
+    # print(f"50: {imu0x50.get_angle()}", end="")
+    # print(f"52: {imu0x52.get_angle()}")
     time.sleep_ms(100)
 
 
