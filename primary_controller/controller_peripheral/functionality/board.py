@@ -166,10 +166,10 @@ class Board:
     return messages
 
   @classmethod
-  def begin_snake_game(cls, display: OLED) -> None:
+  def begin_snake_game(cls, display: OLED, init_x: int=29, init_y: int=29, 
+      x_offset: int=35, y_offset: int=3, max_score: int=50) -> None:
     gc.collect()
-    init_x, init_y = 29, 29
-    game = SnakeGame(display, init_x, init_y)
+    game = SnakeGame(display, init_x, init_y, x_offset, y_offset, max_score + 1)
     while cls.snake_game(game):
       game.restart(init_x, init_y)
     display.clear_screen()

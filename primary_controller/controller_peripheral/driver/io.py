@@ -103,7 +103,6 @@ class PWMOutput:
       if mode == cls.DUTY_MODE:
         pwm_pin.change_duty_cycle(val)
       elif mode == cls.FREQ_MODE:
-        print(val)
         pwm_pin.change_frequency(val)
     cls.active_tasks_lock.release()
     
@@ -117,7 +116,6 @@ class PWMOutput:
     self.__pin = machine.Pin(id, machine.Pin.OUT)
     self.__pwm = machine.PWM(self.__pin, freq=5000, duty=0)
     PWMOutput.active_tasks[self.__id] = (self, mode, PWMOutput._Info(buf_size))
-    print(self.__pwm)
 
   def change_duty_cycle(self, duty: int) -> None:
     """ Change the duty cycle of the PWM output 
@@ -180,7 +178,7 @@ class Buzzer(PWMOutput):
   G =  array.array('i', [25, 49, 98, 196, 392, 784, 1568, 3136, 6272])
   GA = array.array('i', [26, 52, 104, 208, 415, 831, 1661, 3322, 6645])
 
-  def __init__(self, id: int, buf_size: int = 500) -> None:
+  def __init__(self, id: int, buf_size: int = 100) -> None:
     super().__init__(id, PWMOutput.FREQ_MODE, buf_size)
     self.__pwm.freq(1)
     self.__pwm.duty(200)

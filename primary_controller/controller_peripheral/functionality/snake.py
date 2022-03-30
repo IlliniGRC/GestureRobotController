@@ -6,7 +6,7 @@ from driver.io import VibrationMotor
 
 class SnakeGame:
   class _SnakeBody:
-    def __init__(self, init_x: int, init_y: int, board_width: int, board_height: int) -> None:
+    def __init__(self, init_x: int, init_y: int, board_width: int, board_height: int, max_len: int) -> None:
       self.__board_width = board_width
       self.__board_height = board_height
 
@@ -15,7 +15,7 @@ class SnakeGame:
       
       self.tail_idx = 0 # inclusive
       self.head_idx = 0 # inclusive
-      self.buffer_len = self.__board_width * self.__board_height
+      self.buffer_len = max_len
       self.x_sequence = bytearray(self.buffer_len)
       self.y_sequence = bytearray(self.buffer_len)
       self.x_sequence[0] = init_x
@@ -66,14 +66,16 @@ class SnakeGame:
 
   dir_up, dir_right, dir_down, dir_left = 0, 1, 2, 3
     
-  def __init__(self, display: OLED, init_x: int, init_y: int, x_offset: int=35, y_offset: int=3) -> None:
+  def __init__(self, display: OLED, init_x: int, init_y: int, x_offset: int=35, y_offset: int=3, max_len: int=51) -> None:
     self.__x_offset = x_offset
     self.__y_offset = y_offset
     self.__board_width = OLED.WIDTH - 2 * self.__x_offset
     self.__board_height = OLED.HEIGHT - 2 * self.__y_offset
+    self.__cur_len = 1
+    self.__max_len = max_len
 
     self.__dir = SnakeGame.dir_up
-    self.__snake_body = SnakeGame._SnakeBody(init_x, init_y, self.__board_width, self.__board_height)
+    self.__snake_body = SnakeGame._SnakeBody(init_x, init_y, self.__board_width, self.__board_height, self.__max_len)
     self.__direction_changed = False
     self.__food_x, self.__food_y = self.generate_food()
     self.__display = display
@@ -100,11 +102,9 @@ class SnakeGame:
       utils.ASSERT_TRUE(False, "Snake invalid direction")
 
     if self.__snake_body.collide_with_wall(next_x, next_y) or self.__snake_body.collide_with_body(next_x, next_y):
-      buf_len = self.__snake_body.buffer_len
-      score = (self.__snake_body.head_idx + buf_len - self.__snake_body.tail_idx) % buf_len
-      self.game_over(score)
+      self.game_over(self.__cur_len - 1)
       if vmotor != None:
-        vmotor.heavy_vibration()
+        vmotor.medium_vibration()
       return False
 
     if next_x == self.__food_x and next_y == self.__food_y:
@@ -112,6 +112,12 @@ class SnakeGame:
       self.__food_x, self.__food_y = self.generate_food()
       while self.__snake_body.collide_with_body(self.__food_x, self.__food_y):
         self.__food_x, self.__food_y = self.generate_food()
+      self.__cur_len += 1
+      if self.__cur_len >= self.__max_len:
+        self.game_win(self.__cur_len - 1)
+        if vmotor != None:
+          vmotor.heavy_vibration()
+        return False
       if vmotor != None:
         vmotor.slight_vibration()
 
@@ -140,6 +146,10 @@ class SnakeGame:
   def rotate_anticlockwise(self) -> bool:
     self.change_direction((self.__dir + 3) % 4)
 
+  def game_win(self, score: int) -> None:
+    self.display_game_win(score)
+    self.__display_direct.show()
+
   def game_over(self, score: int) -> None:
     self.display_game_over(score)
     self.__display_direct.show()
@@ -147,6 +157,7 @@ class SnakeGame:
   def restart(self, init_x, init_y) -> None:
     self.__dir = SnakeGame.dir_up
     self.__snake_body.reset(init_x, init_y)
+    self.__cur_len = 1
     self.__direction_changed = False
     self.__food_x, self.__food_y = self.generate_food()
     self.__display_direct.fill(0)
@@ -166,6 +177,10 @@ class SnakeGame:
 
   def display_pixel(self, x: int, y: int, color: int):
     self.__display_direct.pixel(x + self.__x_offset, y + self.__y_offset, color)
+
+  def display_game_win(self, score: int):
+    self.__display_direct.text("!YOU WIN!", 28, 16)
+    self.__display_direct.text(f"Score: {score}", 28, 28)
 
   def display_game_over(self, score: int):
     self.__display_direct.text("GAME OVER", 28, 16)

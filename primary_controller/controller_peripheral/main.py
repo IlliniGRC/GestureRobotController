@@ -54,7 +54,7 @@ def main():
       elif choice_idx == 1: # Settings
         current_menu = Menu.settings_menu
       elif choice_idx == 2: # Snake
-        Board.begin_snake_game(Board.main_display)
+        Board.begin_snake_game(Board.main_display, max_score=20)
         current_menu = Menu.main_menu
 
     elif current_menu == Menu.settings_menu:
