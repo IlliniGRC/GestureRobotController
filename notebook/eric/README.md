@@ -5,6 +5,7 @@
 1. [Week 2022-02-07 Finding parts](#2022-02-07-finding-parts)
 2. [Week 2022-02-14 Testing Wit-Motion WT901](#2022-02-14-testing-wit-motion-wt901)
 3. [Week 2022-03-07 Designing PCB](#2022-03-07-designing-pcb)
+4. [Week 2022-03-21 Soldering and Redesigning PCB](#2022-03-21-soldering-and-redesigning-pcb)
 
 ## Important Notes
 
@@ -168,7 +169,7 @@ However, this method involves manually pressing the buttons on the board, making
 
 ESP32 development boards often have a circuit consists of two BJT or MOSFET transistors and several resistors which is named "auto-program circuit". It is done using two outputs from the USB-to-UART chip, `DTR` and `RTS`.
 
-`DTR` stands for "Data Terminal Ready" and `RTS` stands for "Request to Send". For ESP32 to be auto-programed, the `DTR` is set to 1 first, then `RTS` will be set to 1, followed by an immediate set back to 0, then `DTR` also set back to zero. Also, for the circuit to receive a reset command from the chip, the RST can be brought down to zero individually. 
+`DTR` stands for "Data Terminal Ready" and `RTS` stands for "Request to Send". For ESP32 to be auto-programed, the `DTR` is set to 1 first, then `RTS` will be set to 1, followed by an immediate set back to 0, then `DTR` also set back to zero. Also, for the circuit to receive a reset command from the chip, the RST can be brought down to zero individually.
 
 So overall, for doing this automatically, a circuit need to be constructed with a truth table as follows.
 
@@ -189,3 +190,9 @@ The ESP32 development boards on the market right now are using UART-to-USB chips
 
 Useful when trying to create custom logos that would be displayed on the SSD1306.
 [Image to binary image converter](https://www.dcode.fr/binary-image?__r=1.f155588443de719d03c97616d360cfb7)
+
+## 2022-03-21 Soldering and Redesigning PCB
+
+### Buzzers
+
+Buzzer are typically driven through PWMs, which rely on hardware clock to produce such a pulse. The ESP32-WROOM-32D we are using now have 4 hardware clocks and total 16 channels. Because the buzzer need to change the frequency to produce different sounds, one hardware timer will be dedicated to use as buzzer clock. 
