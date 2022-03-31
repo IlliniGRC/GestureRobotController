@@ -1,8 +1,6 @@
-# iRM Embedded 2022
+# Robot Code for Project#41
 
 ![arm](https://github.com/illini-robomaster/iRM_Embedded_2022/workflows/arm%20build/badge.svg)
-
-Embedded system development @ Illini RoboMaster
 
 ## User Guide (Linux / Mac)
 
