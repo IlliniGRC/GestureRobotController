@@ -192,6 +192,14 @@ class Buzzer(PWMOutput):
   PAUSE = 1
 
   START_UP = array.array('i', [C[6], 2, D[6], 2, E[6], 2, F[6], 2, G[6], 2, SEQ_END, 2])
+  
+  NGGYU = array.array("i", [
+    G[5], 4, A[5], 4, C[6], 4, A[5], 4, E[6], 11, PAUSE, 1, E[6], 12, D[6], 18, 
+    G[5], 4, A[5], 4, C[6], 4, A[5], 4, D[6], 11, PAUSE, 1, D[6], 12, C[6], 18, 
+    G[5], 4, A[5], 4, C[6], 4, A[5], 4, C[6], 12, D[6], 12, B[5], 4, A[5], 4, G[5], 4, D[6], 8, C[6], 22, 
+    G[5], 4, A[5], 4, C[6], 4, A[5], 4, E[6], 11, PAUSE, 1, E[6], 12, D[6], 16, 
+    G[5], 4, A[5], 4, C[6], 4, A[5], 4, G[6], 12, B[5], 12, C[6], 18, 
+    G[5], 4, A[5], 4, C[6], 4, A[5], 4, C[6], 12, D[6], 12, B[5], 4, A[5], 4, G[5], 4, D[6], 8, C[6], 22])
 
   def __init__(self, id: int, buf_size: int = 200) -> None:
     super().__init__(id, PWMOutput.FREQ_MODE, buf_size)
@@ -204,6 +212,9 @@ class Buzzer(PWMOutput):
 
   def sound_bootup(self) -> None:
     self.custom_sound(Buzzer.START_UP)
+
+  def never_gonna_give_you_up(self) -> None:
+    self.custom_sound(Buzzer.NGGYU)
 
   def custom_sound(self, seq: array.array) -> None:
     """ Command the buzzer using user defined sequence 
