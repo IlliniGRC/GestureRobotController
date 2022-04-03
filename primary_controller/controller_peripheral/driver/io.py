@@ -134,7 +134,7 @@ class PWMOutput:
         `freq`: destinated frequency """
     self.__pwm.freq(freq)
 
-  def append_sequence(self, seq: array.array, seq_end: str):
+  def append_sequence(self, seq: array.array, seq_end: str) -> bool:
     if seq[-2] != seq_end:
       seq.append(seq_end)
       seq.append(1)
@@ -154,17 +154,17 @@ class VibrationMotor(PWMOutput):
     super().__init__(id, PWMOutput.DUTY_MODE, buf_size)
     self.__pwm.duty(0)
 
-  def slight_vibration(self) -> None:
+  def slight_vibration(self) -> bool:
     """ Vibration motor slightly vibrates, non-blocking """
-    self.custom_vibration(VibrationMotor.slight_seq)
+    return self.custom_vibration(VibrationMotor.slight_seq)
 
-  def medium_vibration(self) -> None:
+  def medium_vibration(self) -> bool:
     """ Vibration motor moderately vibrates, non-blocking """
-    self.custom_vibration(VibrationMotor.medium_seq)
+    return self.custom_vibration(VibrationMotor.medium_seq)
 
-  def heavy_vibration(self) -> None:
+  def heavy_vibration(self) -> bool:
     """ Vibration motor heavily vibrates, non-blocking """
-    self.custom_vibration(VibrationMotor.heavy_seq)
+    return self.custom_vibration(VibrationMotor.heavy_seq)
 
   def custom_vibration(self, seq: array.array) -> bool:
     """ Command the vibration motor using user defined sequence 
@@ -172,7 +172,7 @@ class VibrationMotor(PWMOutput):
             [0, 256), representing a duty cycle of [entry / 1024]. each of the entry represents
             the vibration strength in consecutive 100ms period """
     utils.ASSERT_TRUE(len(seq) % 2 == 0, "Vibration Motor Sequence length not even")
-    self.append_sequence(seq, VibrationMotor.SEQ_END)
+    return self.append_sequence(seq, VibrationMotor.SEQ_END)
 
 class Buzzer(PWMOutput):
   """ Note: Frequency less than or equal to 610 cannot make the buzzer correctly function"""
@@ -193,7 +193,7 @@ class Buzzer(PWMOutput):
 
   START_UP = array.array('i', [C[6], 2, D[6], 2, E[6], 2, F[6], 2, G[6], 2, SEQ_END, 2])
   
-  NGGYU = array.array("i", [
+  MYSTERY = array.array("i", [
     G[5], 4, A[5], 4, C[6], 4, A[5], 4, E[6], 11, PAUSE, 1, E[6], 12, D[6], 18, 
     G[5], 4, A[5], 4, C[6], 4, A[5], 4, D[6], 11, PAUSE, 1, D[6], 12, C[6], 18, 
     G[5], 4, A[5], 4, C[6], 4, A[5], 4, C[6], 12, D[6], 12, B[5], 4, A[5], 4, G[5], 4, D[6], 8, C[6], 22, 
@@ -210,11 +210,11 @@ class Buzzer(PWMOutput):
     utils.EXPECT_TRUE(percentage >= 0 and percentage <= 1, "Buzzer invalid volume percentage")
     self.__pwm.duty(int(100 * percentage))
 
-  def sound_bootup(self) -> None:
-    self.custom_sound(Buzzer.START_UP)
+  def sound_bootup(self) -> bool:
+    return self.custom_sound(Buzzer.START_UP)
 
-  def never_gonna_give_you_up(self) -> None:
-    self.custom_sound(Buzzer.NGGYU)
+  def sound_mystery(self) -> bool:
+    return self.custom_sound(Buzzer.MYSTERY)
 
   def custom_sound(self, seq: array.array) -> None:
     """ Command the buzzer using user defined sequence 
@@ -222,4 +222,4 @@ class Buzzer(PWMOutput):
             [0, 256), representing a duty cycle of [entry / 1024]. each of the entry represents
             the vibration strength in consecutive 100ms period """
     utils.ASSERT_TRUE(len(seq) % 2 == 0, "Buzzer Sequence length not even")
-    self.append_sequence(seq, Buzzer.SEQ_END)
+    return self.append_sequence(seq, Buzzer.SEQ_END)
