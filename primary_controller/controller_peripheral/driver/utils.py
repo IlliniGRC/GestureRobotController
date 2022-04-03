@@ -37,13 +37,13 @@ def start_screen_exited() -> bool:
 def EXPECT_TRUE(condition: bool, message: str) -> None:
   """ Expect condition to be true, generate a warning if violated, non-blocking """
   if not condition:
-    print(message)
+    print(f"Warning: {message}")
     Board.status_led.show_warning()
   
 def ASSERT_TRUE(condition: bool, message: str) -> None:
   """ Assert condition to be true, generate an error if violated, blocking """
   if not condition:
-    print(message)
+    print(f"ERROR: {message}")
     Board.status_led.show_error()
   
 
@@ -56,8 +56,9 @@ def remove_main_file() -> None:
 def print_file(filename: str) -> None:
   """ Print given file to REPL
       `filename`: name of the file """
-  with open(filename) as f:
-    print(f.read())
+  with open(filename) as file:
+    for line in file:
+      print(line, end="")
 
 def storage_status() -> None:
   """ Print current storage status to REPL """

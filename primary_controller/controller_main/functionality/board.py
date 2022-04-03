@@ -1,8 +1,10 @@
-import machine, _thread
+import machine, _thread, time, array
 
 import driver.utils as utils
 from driver.uart import UART
 from driver.status_led import StatusLed
+
+from functionality.wt901 import WT901
 
 def uart1_rx_callback() -> None:
   """ Callback function that called every time uart1 received message(s) """
@@ -83,3 +85,18 @@ class Board:
     cls.uart1_pending = False
     cls.uart1_pending_lock.release()
     return messages
+
+  @classmethod
+  def estimate_polling_rate(cls, imus: list, iter_count: int) -> None:
+    start = time.time_ns()
+    buffer = bytearray(150)
+    for _ in range(iter_count):
+      index = 0
+      for imu in imus:
+        index = imu.get_angle_report(buffer, index)
+      # print(buffer)
+    end = time.time_ns()
+    print(buffer)
+    print(f"WT901 Pooling Rate: {iter_count * 10e8 / (end - start)} it/s")
+
+  # imus = [WT901(0x50, Board.i2c), WT901(0x52, Board.i2c), WT901(0x54, Board.i2c), WT901(0x50, Board.i2c), WT901(0x52, Board.i2c), WT901(0x54, Board.i2c)]

@@ -20,6 +20,7 @@ class Config:
   JATTR_IMU_RING = "Ring"
   JATTR_IMU_LITTLE = "Little"
   JATTR_IMU_HAND = "Hand"
+  JATTR_IMU_ARM = "Arm"
   # config file style
   #
   # {

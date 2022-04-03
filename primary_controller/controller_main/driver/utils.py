@@ -24,13 +24,13 @@ def execute_main(func) -> None:
 def EXPECT_TRUE(condition: bool, message: str) -> None:
   """ Expect condition to be true, generate a warning if violated, non-blocking """
   if not condition:
-    print(message)
+    print(f"Warning: {message}")
     Board.status_led.show_warning()
   
 def ASSERT_TRUE(condition: bool, message: str) -> None:
   """ Assert condition to be true, generate an error if violated, blocking """
   if not condition:
-    print(message)
+    print(f"ERROR: {message}")
     Board.status_led.show_error()
   
 

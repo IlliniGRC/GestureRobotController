@@ -52,6 +52,9 @@ class PWMOutput:
     def __init__(self, size: int=50) -> None:
       """ Create a new PWM Information instance
           `size`: internal buffer size """
+      if size % 2 != 0:
+        utils.EXPECT_TRUE(False, f"PWM Output buffer size should be even, use {size + 1} instead of {size}")
+        size += 1
       self.start = 0
       self.len = 0
       self.size = size
@@ -72,20 +75,24 @@ class PWMOutput:
         self.seq[end:end + len(seq)] = seq
     
     def dequeue(self) -> int:
-      """ Get one message from the start of the internal buffer """
+      """ Get next action from the internal buffer """
       if self.len == 0:
         return -1
-      ret = self.seq[self.start]
-      self.start = (self.start + 1) % self.size
-      self.len -= 1
-      return ret
+      value = self.seq[self.start]
+      duration = self.seq[(self.start + 1) % self.size]
+      if duration <= 1: 
+        self.start = (self.start + 2) % self.size
+        self.len -= 2
+      else:
+        self.seq[(self.start + 1) % self.size] -= 1
+      return value
   
   timer = None
   active_tasks = {}
   active_tasks_lock = _thread.allocate_lock()
 
   @classmethod
-  def auxiliary_init(cls, timer_period_ms: int=100) -> None:
+  def auxiliary_init(cls, timer_period_ms: int=50) -> None:
     """ Initializations that fulfill full requirements for system to operate """
     cls.timer = machine.Timer(utils.PWM_OUT_TIMER_ID)
     cls.timer.init(mode=machine.Timer.PERIODIC, period=timer_period_ms, callback=PWMOutput.__update_callback)
@@ -127,12 +134,21 @@ class PWMOutput:
         `freq`: destinated frequency """
     self.__pwm.freq(freq)
 
+  def append_sequence(self, seq: array.array, seq_end: str):
+    if seq[-2] != seq_end:
+      seq.append(seq_end)
+      seq.append(1)
+    PWMOutput.active_tasks_lock.acquire()
+    ret = PWMOutput.active_tasks[self.__id][2].append(seq)
+    PWMOutput.active_tasks_lock.release()
+    return ret
+
 class VibrationMotor(PWMOutput):
   """ Class extends from PWMOutput that used to control vibration motor """
   SEQ_END = 0
-  slight_seq = array.array('i', [410, 410,  SEQ_END])
-  medium_seq = array.array('i', [410, 615, 615, 410,  SEQ_END])
-  heavy_seq  = array.array('i', [410, 615, 819, 819, 819, 819, 615, 410, SEQ_END])
+  slight_seq = array.array('i', [410, 2,  SEQ_END, 1])
+  medium_seq = array.array('i', [410, 1, 615, 2, 410, 1,  SEQ_END, 1])
+  heavy_seq  = array.array('i', [410, 1, 615, 1, 819, 4, 615, 1, 410, 1, SEQ_END, 1])
 
   def __init__(self, id: int, buf_size: int = 50) -> None:
     super().__init__(id, PWMOutput.DUTY_MODE, buf_size)
@@ -155,12 +171,8 @@ class VibrationMotor(PWMOutput):
         `seq`: user defined sequence, should be a integer array, each of the entry is in the range
             [0, 256), representing a duty cycle of [entry / 1024]. each of the entry represents
             the vibration strength in consecutive 100ms period """
-    if seq[-1] != VibrationMotor.SEQ_END:
-      seq.append(VibrationMotor.SEQ_END)
-    PWMOutput.active_tasks_lock.acquire()
-    ret = PWMOutput.active_tasks[self.__id][2].append(seq)
-    PWMOutput.active_tasks_lock.release()
-    return ret
+    utils.ASSERT_TRUE(len(seq) % 2 == 0, "Vibration Motor Sequence length not even")
+    self.append_sequence(seq, VibrationMotor.SEQ_END)
 
 class Buzzer(PWMOutput):
   """ Note: Frequency less than or equal to 610 cannot make the buzzer correctly function"""
@@ -177,23 +189,26 @@ class Buzzer(PWMOutput):
   FG = array.array('i', [23, 46, 93, 185, 370, 740, 1480, 2960, 5920])
   G =  array.array('i', [25, 49, 98, 196, 392, 784, 1568, 3136, 6272])
   GA = array.array('i', [26, 52, 104, 208, 415, 831, 1661, 3322, 6645])
+  PAUSE = 1
 
-  def __init__(self, id: int, buf_size: int = 100) -> None:
+  START_UP = array.array('i', [C[6], 2, D[6], 2, E[6], 2, F[6], 2, G[6], 2, SEQ_END, 2])
+
+  def __init__(self, id: int, buf_size: int = 200) -> None:
     super().__init__(id, PWMOutput.FREQ_MODE, buf_size)
     self.__pwm.freq(1)
-    self.__pwm.duty(200)
+    self.__pwm.duty(50)
+  
+  def change_volume(self, percentage: float) -> None:
+    utils.EXPECT_TRUE(percentage >= 0 and percentage <= 1, "Buzzer invalid volume percentage")
+    self.__pwm.duty(int(100 * percentage))
 
   def sound_bootup(self) -> None:
-    self.custom_sound(array.array('i', [Buzzer.C[6], Buzzer.D[6], Buzzer.E[6], Buzzer.F[6], Buzzer.G[6]]))
+    self.custom_sound(Buzzer.START_UP)
 
   def custom_sound(self, seq: array.array) -> None:
-    """ Command the vibration motor using user defined sequence 
+    """ Command the buzzer using user defined sequence 
         `seq`: user defined sequence, should be a integer array, each of the entry is in the range
             [0, 256), representing a duty cycle of [entry / 1024]. each of the entry represents
             the vibration strength in consecutive 100ms period """
-    if seq[-1] != Buzzer.SEQ_END:
-      seq.append(Buzzer.SEQ_END)
-    PWMOutput.active_tasks_lock.acquire()
-    ret = PWMOutput.active_tasks[self.__id][2].append(seq)
-    PWMOutput.active_tasks_lock.release()
-    return ret
+    utils.ASSERT_TRUE(len(seq) % 2 == 0, "Buzzer Sequence length not even")
+    self.append_sequence(seq, Buzzer.SEQ_END)

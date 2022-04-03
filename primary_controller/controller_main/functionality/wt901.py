@@ -1,6 +1,20 @@
-import machine
+import machine, math
+
+import driver.utils as utils
 
 class WT901:
+  # positions
+  NOT_ASSIGNED = "X"
+  THUMB = "Thumb"
+  INDEX = "Index"
+  MIDDLE = "Middle"
+  RING = "Ring"
+  LITTLE = "Little"
+  HAND = "Hand"
+  ARM = "Arm"
+  positions = [THUMB, INDEX, MIDDLE, RING, LITTLE, HAND, ARM]
+  initialized_positions = set()
+  # Control words
   SAVE      = 0x00
   CALSW     = 0x01
   RSW       = 0x02
@@ -71,13 +85,40 @@ class WT901:
   DIO_MODE_DOPWM = 4
   DIO_MODE_GPS   = 5
 
+  @classmethod
+  def auxiliary_init(cls):
+    identity_test = set(cls.NOT_ASSIGNED[0])
+    for label, *_ in cls.positions:
+      utils.ASSERT_TRUE(label not in identity_test, f"WT901 duplicated identities <{label}>")
+      identity_test.add(label)
+
   def __init__(self, i2c_addr, i2c: machine.SoftI2C) -> None:
     self.__i2c = i2c
     self.__i2c_addr = i2c_addr
+    self.__position = WT901.NOT_ASSIGNED
+    self.__report_header = self.__position[0]
 
-  def get_angle(self):
+  def assign_position(self, position: str) -> None:
+    utils.ASSERT_TRUE(position in WT901.positions, "WT901 no such position")
+    utils.ASSERT_TRUE(position not in WT901.initialized_positions, f"WT901 position {position} already initialized")
+    WT901.initialized_positions.add(position)
+    self.__position = position
+    self.__report_header = position[0]
+
+  def get_angle_raw(self):
     ret = self.__i2c.readfrom_mem(self.__i2c_addr, WT901.Roll, 6)
-    roll  = (ret[1] << 8 | ret[0]) / 32768 * 180
-    pitch = (ret[3] << 8 | ret[2]) / 32768 * 180
-    yaw   = (ret[5] << 8 | ret[4]) / 32768 * 180
-    return roll, pitch, yaw
+    return ret[1] << 8 | ret[0], ret[3] << 8 | ret[2], ret[5] << 8 | ret[4]
+
+  def get_angle_degree(self):
+    roll, pitch, yaw = self.get_angle_raw()
+    return roll / 32768 * 180, pitch / 32768 * 180, yaw / 32768 * 180
+
+  def get_angle_radian(self):
+    roll, pitch, yaw = self.get_angle_raw()
+    return roll / 32768 * math.pi, pitch / 32768 * math.pi, yaw / 32768 * math.pi
+
+  def get_angle_report(self, buf: bytearray, start_idx: int) -> int:
+    buf[start_idx] = ord(self.__report_header)
+    buf[start_idx + 1:start_idx + 7] = self.__i2c.readfrom_mem(self.__i2c_addr, WT901.Roll, 6)
+    buf[start_idx + 7] = 10 # encoding for \n
+    return start_idx + 8
