@@ -2,7 +2,6 @@ import machine, _thread, time, gc
 
 import driver.utils as utils
 from driver.display import Drawing, OLED
-from driver.uart import UART
 from driver.status_led import StatusLed
 from driver.threading import ThreadSafeQueue
 from driver.io import Button, Buzzer, PWMOutput, VibrationMotor
@@ -11,6 +10,7 @@ from functionality.menu import Menu
 from functionality.snake import SnakeGame
 from functionality.config import Config
 from functionality.text_viewer import TextViewer
+from functionality.communication import Communication
 
 def uart1_rx_callback() -> None:
   """ Callback function that called every time uart1 received message(s) """
@@ -34,11 +34,8 @@ class Board:
   # status led
   status_led = None
 
-  # uart1
-  uart1 = None
-  uart1_queue = None
-  uart1_pending = False
-  uart1_pending_lock = _thread.allocate_lock()
+  # uart1 communication
+  uart1_com = None
 
   # buttons
   button25 = None
@@ -61,7 +58,7 @@ class Board:
     """ Initializations that fulfill basic requirements for system to operate """
     # set processor speed to 240MHz
     #   available freq: [20MHz, 40MHz, 80MHz, 160MHz, 240MHz]
-    machine.freq(240000000)
+    machine.freq(int(240e6))
 
     # Status led initialization must be the first
     cls.status_led = StatusLed()
@@ -80,10 +77,7 @@ class Board:
     Menu.auxiliary_init()
     Config.auxiliary_init()
     
-    cls.uart1 = UART(1, tx = 18, rx = 17)
-    cls.uart1.register_rx_callback(uart1_rx_callback)
-    # uart begin earlier for receiving message from Main
-    cls.uart1_queue = cls.uart1.begin()
+    cls.uart1_com = Communication()
     
     cls.button25 = Button(25)
     cls.button26 = Button(26)
@@ -105,7 +99,7 @@ class Board:
   @classmethod
   def end_operation(cls) -> None:
     """ End operation of all facilities """
-    cls.uart1.finish()
+    cls.uart1_com.finish()
 
   @classmethod
   def is_uart1_pending(cls) -> bool:

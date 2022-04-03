@@ -1,36 +1,32 @@
-import _thread
+import machine, _thread
 
 import driver.utils as utils
-from driver.uart import UART
+from driver.uart import UARTCallback
 
 
 class Communication:
+  # Control characters
+  INTER_COMMAND_SPLIT = b'\n'
+  COMMAND_SPLIT = b'|'
   # Control Words
-  START = "start"
-  IMU = "IMU"
-
+  START = b'start'
+  IMU = b'IMU'
 
   def __init__(self) -> None:
-    self.__uart1 = UART(1, tx=18, rx=17)
-    self.__uart1.register_rx_callback(self.__uart1_rx_callback)
-    self.__uart1_pending = False
-    self.__uart1_pending_lock = _thread.allocate_lock()
+    self.__uart1 = UARTCallback(1, tx=18, rx=17)
+    self.__uart1.begin(self.__uart1_rx_callback)
     self.__message_queue = {}
-    self.__uart1_queue = self.__uart1.begin()
+    self.__message_lock = _thread.allocate_lock()
 
-  def __uart1_rx_callback(self) -> None:
+  def __uart1_rx_callback(self, uart1: machine.UART) -> None:
     """ Callback function that called every time uart1 received message(s) """
-    self.__uart1_pending_lock.acquire()
-    self.__uart1_pending = True
-    self.__uart1_pending_lock.release()
-
-  def update(self) -> None:
-    if not self.__uart1_pending:
+    self.__message_lock.acquire()
+    messages = uart1.read()
+    if messages == None:
+      self.__message_lock.release()
       return
-    self.__uart1_pending_lock.acquire()
-    while not self.__uart1_queue.is_empty():
-      message = self.__uart1_queue.dequeue()
-      preprocess = message.split(" ", 1)
+    for message in messages.strip().split(Communication.INTER_COMMAND_SPLIT):
+      preprocess = message.split(Communication.COMMAND_SPLIT, 1)
       if len(preprocess) == 1:
         utils.EXPECT_TRUE(False, f"Communication invalid message {message}")
         continue
@@ -39,19 +35,29 @@ class Communication:
         self.__message_queue[category].append(data)
       else:
         self.__message_queue[category] = [data]
-    self.__uart1_pending = False
-    self.__uart1_pending_lock.release()
+    self.__message_lock.release()
 
-  def get_message(self, category: str) -> str:
-    if category not in self.__message_queue or len(self.__message_queue[category] == 0):
+  def send(self, category: bytes, *messages: str) -> None:
+    for message in messages:
+      self.__uart1.send(category.decode() + Communication.COMMAND_SPLIT.decode() +
+          message + Communication.INTER_COMMAND_SPLIT.decode())
+
+  def read(self, category: bytes) -> str:
+    self.__message_lock.acquire()
+    if category not in self.__message_queue or len(self.__message_queue[category]) == 0:
+      self.__message_lock.release()
       return None
-    ret = self.__message_queue[0]
-    self.__message_queue = self.__message_queue[1:]
+    ret = self.__message_queue[category][0]
+    self.__message_queue[category] = self.__message_queue[category][1:]
+    self.__message_lock.release()
     return ret
 
-  def get_all_message(self, category: str) -> list:
-    if category not in self.__message_queue or len(self.__message_queue[category] == 0):
+  def read_all(self, category: bytes) -> list:
+    self.__message_lock.acquire()
+    if category not in self.__message_queue or len(self.__message_queue[category]) == 0:
+      self.__message_lock.release()
       return None
-    ret = self.__message_queue
-    self.__message_queue = []
+    ret = self.__message_queue[category]
+    self.__message_queue[category] = []
+    self.__message_lock.release()
     return ret
