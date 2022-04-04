@@ -37,57 +37,17 @@ def main():
   Board.begin_operation()
   time.sleep_ms(100)
 
-  # Example useage of Board.uart1 and Board.button
+  # Example useage of Board.button
   #
   # while True:
-  #   # UART
-  #   if Board.is_uart1_pending():
-  #     messages = Board.get_all_uart1_message()
-  #     print(f"UART: {messages}")
   #   # BUTTON
   #   if Board.is_button_pending():
   #     messages = Board.get_all_button_message()
   #     print(f"BUTTON: {messages}")
   #   time.sleep_ms(10)
 
-  # set current display to main menu
-  current_menu = Menu.main_menu
-
-  # menu loop
-  while True:
-    if current_menu == Menu.main_menu:
-      choice_idx = Board.display_menu_and_get_choice(current_menu, Board.main_display, 0)
-
-      if choice_idx == 0: # Start Operation
-        current_menu = Menu.main_menu
-      elif choice_idx == 1: # Settings
-        current_menu = Menu.settings_menu
-      elif choice_idx == 2: # Snake
-        Board.begin_snake_game(Board.main_display, max_score=20)
-        current_menu = Menu.main_menu
-
-    elif current_menu == Menu.settings_menu:
-      choice_idx = Board.display_menu_and_get_choice(current_menu, Board.main_display, -1)
-
-      if choice_idx == 0: # Load Config
-        current_menu = Menu.settings_menu
-      elif choice_idx == 1: # Create Config
-        user_string = Board.display_keyboard_and_get_input(Board.main_display, "File Name", 2)
-        
-        if user_string == None: # Cancel
-          current_menu = Menu.settings_menu
-        else: # Confirm
-          print(user_string)
-          current_menu = Menu.settings_menu
-
-      elif choice_idx == 2: # View Config
-        with open("main.py", "r") as f:
-          # normal file contains "\r\n" as new line character
-          Board.begin_text_viewer(Board.main_display, f.read(), True, "\r\n") 
-        current_menu = Menu.settings_menu
-      elif choice_idx == 3: # Back
-        current_menu.change_highlight(0) # reset highlight
-        current_menu = Menu.main_menu
+  # Begin menu loop
+  Board.load_menu()
 
 if __name__ == '__main__':
   # !!! Do NOT modify this function !!!

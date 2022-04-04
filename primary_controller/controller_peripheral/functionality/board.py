@@ -300,6 +300,10 @@ class Board:
   @classmethod
   def begin_text_viewer(cls, display: OLED, text: str, 
       wrap_content:bool=True, delimiter: str="\n") -> None:
+    """ Begin the operation of a text viewer using specified string
+        `display`: the OLED for text to be displayed on
+        `wrap_content`: whether to wrap the content in case line length exceed screen width
+        `delimiter`: used when determine line split point """
     gc.collect()
     display_direct = display.get_direct_control()
     display.lock.acquire()
@@ -332,3 +336,71 @@ class Board:
     
     display.clear_screen()
     gc.collect()
+
+  @classmethod
+  def load_menu(cls):
+    """ Main menu loop, blocks forever """
+    # set current display to main menu
+    current_menu = Menu.main_menu
+
+    # menu loop
+    while True:
+      if current_menu == Menu.main_menu:
+        choice_idx = Board.display_menu_and_get_choice(current_menu, Board.main_display, 0)
+
+        if choice_idx == 0: # Start Operation
+          current_menu = Menu.main_menu
+        elif choice_idx == 1: # Settings
+          current_menu = Menu.settings_menu
+
+      elif current_menu == Menu.settings_menu:
+        choice_idx = Board.display_menu_and_get_choice(current_menu, Board.main_display, -1)
+
+        if choice_idx == 0: # Load Config
+          current_menu = Menu.general_menu
+        elif choice_idx == 1:
+          current_menu = Menu.configs_menu
+        elif choice_idx == 2: # Snake
+          Board.begin_snake_game(Board.main_display, max_score=20)
+          current_menu = Menu.settings_menu
+        elif choice_idx == 3: # Mystery
+          Board.buzzer.sound_mystery()
+          current_menu.change_highlight(0) # reset highlight
+          current_menu = Menu.main_menu
+        elif choice_idx == 4: # Back
+          current_menu.change_highlight(0) # reset highlight
+          current_menu = Menu.main_menu
+
+      elif current_menu == Menu.general_menu:
+        choice_idx = Board.display_menu_and_get_choice(current_menu, Board.main_display, -1)
+
+        if choice_idx == 0: # Change Volume
+          current_menu = Menu.general_menu
+        elif choice_idx == 1: # Back
+          current_menu.change_highlight(0) # reset highlight
+          current_menu = Menu.settings_menu
+
+      elif current_menu == Menu.configs_menu:
+        choice_idx = Board.display_menu_and_get_choice(current_menu, Board.main_display, -1)
+
+        if choice_idx == 0: # Load Config
+          current_menu = Menu.configs_menu
+        elif choice_idx == 1: # Create Config
+          user_string = Board.display_keyboard_and_get_input(Board.main_display, "File Name", 2)
+
+          if user_string == None: # Cancel
+            current_menu.change_highlight(0) # reset highlight
+            current_menu = Menu.main_menu
+          else: # Confirm
+            print(user_string)
+            current_menu = Menu.configs_menu
+
+        elif choice_idx == 2: # View Config
+          with open("driver/status_led.py", "r") as f:
+            # normal file contains "\r\n" as new line character
+            Board.begin_text_viewer(Board.main_display, f.read(), True, "\r\n") 
+            current_menu = Menu.configs_menu
+
+        elif choice_idx == 3: # Back
+          current_menu.change_highlight(0) # reset highlight
+          current_menu = Menu.settings_menu

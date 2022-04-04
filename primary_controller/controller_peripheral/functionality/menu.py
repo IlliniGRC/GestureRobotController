@@ -11,6 +11,8 @@ class Menu:
 
   main_menu = None
   settings_menu = None
+  general_menu = None
+  configs_menu = None
 
   # special menu
   keyboard = None
@@ -28,14 +30,24 @@ class Menu:
     """ Initializations that fulfill full requirements for system to operate """
     cls.main_menu = Menu()
     cls.main_menu.add_choice(4, 14, ["Start Operation"])
-    cls.main_menu.add_choice(32, 28, ["Settings"])
-    cls.main_menu.add_choice(44, 44, ["Snake"])
+    cls.main_menu.add_choice(32, 32, ["Settings"])
 
     cls.settings_menu = Menu()
-    cls.settings_menu.add_choice(20, 9, ["Load Config"])
-    cls.settings_menu.add_choice(12, 22, ["Create Config"])
-    cls.settings_menu.add_choice(20, 35, ["View Config"])
-    cls.settings_menu.add_choice(48, 48, ["Back"])
+    cls.settings_menu.add_choice(36, 4, ["General"])
+    cls.settings_menu.add_choice(40, 16, ["Config"])
+    cls.settings_menu.add_choice(44, 28, ["Snake"])
+    cls.settings_menu.add_choice(36, 40, ["Mystery"])
+    cls.settings_menu.add_choice(48, 52, ["Back"])
+
+    cls.general_menu = Menu()
+    cls.general_menu.add_choice(40, 14, ["Volume"])
+    cls.general_menu.add_choice(48, 32, ["Back"])
+
+    cls.configs_menu = Menu()
+    cls.configs_menu.add_choice(20, 9, ["Load Config"])
+    cls.configs_menu.add_choice(12, 22, ["Create Config"])
+    cls.configs_menu.add_choice(20, 35, ["View Config"])
+    cls.configs_menu.add_choice(48, 48, ["Back"])
 
     cls.keyboard = Menu()
     line_start = 10
