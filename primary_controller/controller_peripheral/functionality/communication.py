@@ -5,12 +5,21 @@ from driver.uart import UARTCallback
 
 
 class Communication:
+  """ Communication through UART1 between main and peripheral controller. 
+      A control words is formulated as follows:
+      <ControlCommand><COMMAND_SPLIT><ControlDestination><INTER_COMMAND_SPLIT> """
   # Control characters
   INTER_COMMAND_SPLIT = b'\n'
   COMMAND_SPLIT = b'|'
-  # Control Words
+  # Control commands
   START = b'start'
-  IMU = b'IMU'
+  IMU = b'imu'
+  CONFIRM = b'con'
+  WARNING = b'warn'
+  FATAL = b'ERR'
+  # Control destinations
+  CONTROLLER = b'mcu'
+  BOOT_UP = b'boot'
 
   def __init__(self) -> None:
     self.__uart1 = UARTCallback(1, tx=18, rx=17)

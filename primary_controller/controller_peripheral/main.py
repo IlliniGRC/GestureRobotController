@@ -3,18 +3,27 @@ import driver.utils as utils
 
 from functionality.board import Board
 from functionality.menu import Menu
+from functionality.communication import Communication as Com
 
 # controls if start screen should be shown
 show_start_screen = True
 
 def main():
   """ Main function, contains event loop """
+  # led flash
   Board.status_led.show_bootup()
-
   # auxiliary initializations
   Board.auxiliary_init()
+  # buzzer and vmotor indicating running
   Board.buzzer.sound_bootup()
   Board.vmotor.slight_vibration()
+
+  # waiting for main controller to connect
+  while True:
+    msg = Board.uart1_com.read_all(Com.START)
+    if msg != None:
+      Board.uart1_com.send(Com.START, Com.BOOT_UP)
+      break
 
   # wait for start screen to finish if not already
   while not utils.start_screen_exited():
