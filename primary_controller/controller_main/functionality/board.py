@@ -1,3 +1,4 @@
+from functionality.communication import Communication
 import machine, _thread, time, array
 
 import driver.utils as utils
@@ -18,10 +19,7 @@ class Board:
   status_led = None
 
   # uart1
-  uart1 = None
-  uart1_queue = None
-  uart1_pending = False
-  uart1_pending_lock = _thread.allocate_lock()
+  uart1_com = None
 
   # i2c
   i2c = None
@@ -40,10 +38,7 @@ class Board:
   @classmethod
   def auxiliary_init(cls) -> None:
     """ Initializations that fulfill full requirements for system to operate """
-    cls.uart1 = UART(1, tx = 18, rx = 17)
-    cls.uart1.register_rx_callback(uart1_rx_callback)
-    # uart begin earlier for receiving message from Main
-    cls.uart1_queue = cls.uart1.begin()
+    cls.uart1_com = Communication()
 
     cls.i2c = machine.SoftI2C(sda = machine.Pin(4), scl = machine.Pin(5))
 

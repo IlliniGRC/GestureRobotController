@@ -23,9 +23,9 @@ def main():
 
   while True:
     # UART
-    if Board.is_uart1_pending():
-      messages = Board.get_all_uart1_message()
-      print(f"UART: {messages}")
+    uart1_msgs = Board.uart1_com.read_all(b'test')
+    if uart1_msgs != None:
+      print(f"UART: {uart1_msgs}")
 
     # print(f"50: {imu0x50.get_angle()}", end="")
     # print(f"52: {imu0x52.get_angle()}")

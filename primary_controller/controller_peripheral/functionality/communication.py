@@ -37,10 +37,11 @@ class Communication:
         self.__message_queue[category] = [data]
     self.__message_lock.release()
 
-  def send(self, category: bytes, *messages: str) -> None:
+  def send(self, category: bytes, *messages) -> None:
     for message in messages:
       self.__uart1.send(category.decode() + Communication.COMMAND_SPLIT.decode() +
-          message + Communication.INTER_COMMAND_SPLIT.decode())
+          (message if type(message) == str else message.decode()), 
+          delimiter=Communication.INTER_COMMAND_SPLIT.decode())
 
   def read(self, category: bytes) -> str:
     self.__message_lock.acquire()
