@@ -3,8 +3,8 @@ from functionality.board import Board
 from driver.threading import Thread
 
 # Timer IDs used by different utilities
-UART_TIMER_ID = 0
-PWM_OUT_TIMER_ID = 1
+UART_TIMER_ID = 2
+PWM_OUT_TIMER_ID = 3
 
 start_screen_exit_sig = None # If start screen have exited
 def execute_main(func, start_screen: bool = True) -> None:

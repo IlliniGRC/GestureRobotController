@@ -24,6 +24,7 @@ def main():
     if msg != None:
       Board.uart1_com.send(Com.START, Com.BOOT_UP)
       break
+    time.sleep_ms(100)
 
   # wait for start screen to finish if not already
   while not utils.start_screen_exited():

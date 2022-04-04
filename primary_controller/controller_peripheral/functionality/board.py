@@ -418,8 +418,11 @@ class Board:
         display_direct.fill(0)
         display_direct.text("Volume", 40, 9, 1)
         display_direct.text(f"{volume:3}", 4, 22, 1)
+        rect_start, rect_end = 30, 116
+        # empty outside
+        display_direct.rect(rect_start, 22, rect_end - rect_start, 7, 1)
         if volume != 0:
-          rect_start, rect_end = 30, 124
+          # filled inside
           rect_width = int((rect_end - rect_start) * volume / 100)
           display_direct.fill_rect(rect_start, 22, rect_width, 7, 1)
 
