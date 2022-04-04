@@ -13,6 +13,7 @@ class Menu:
   settings_menu = None
   general_menu = None
   configs_menu = None
+  volume_menu = None
 
   # special menu
   keyboard = None
@@ -48,6 +49,11 @@ class Menu:
     cls.configs_menu.add_choice(12, 22, ["Create Config"])
     cls.configs_menu.add_choice(20, 35, ["View Config"])
     cls.configs_menu.add_choice(48, 48, ["Back"])
+
+    cls.volume_menu = Menu()
+    cls.volume_menu.add_choice(38, 35, ["-"])
+    cls.volume_menu.add_choice(82, 35, ["+"])
+    cls.volume_menu.add_choice(48, 48, ["Back"])
 
     cls.keyboard = Menu()
     line_start = 10

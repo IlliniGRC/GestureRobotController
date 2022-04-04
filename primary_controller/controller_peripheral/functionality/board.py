@@ -85,7 +85,14 @@ class Board:
     cls.button_queue = ThreadSafeQueue()
 
     cls.vmotor = VibrationMotor(22)
-    cls.buzzer = Buzzer(23)
+
+    volume = 50
+    try:
+      with open("data/volume.settings", "r") as f:
+        volume = int(f.read())
+    except Exception:
+      pass
+    cls.buzzer = Buzzer(23, volume)
 
     cls.text_viewer = TextViewer()
 
@@ -375,7 +382,7 @@ class Board:
         choice_idx = Board.display_menu_and_get_choice(current_menu, Board.main_display, -1)
 
         if choice_idx == 0: # Change Volume
-          current_menu = Menu.general_menu
+          current_menu = Menu.volume_menu
         elif choice_idx == 1: # Back
           current_menu.change_highlight(0) # reset highlight
           current_menu = Menu.settings_menu
@@ -404,3 +411,28 @@ class Board:
         elif choice_idx == 3: # Back
           current_menu.change_highlight(0) # reset highlight
           current_menu = Menu.settings_menu
+
+      elif current_menu == Menu.volume_menu:
+        volume = Board.buzzer.get_volume()
+        display_direct = Board.main_display.get_direct_control()
+        display_direct.fill(0)
+        display_direct.text("Volume", 40, 9, 1)
+        display_direct.text(f"{volume:3}", 4, 22, 1)
+        if volume != 0:
+          rect_start, rect_end = 30, 124
+          rect_width = int((rect_end - rect_start) * volume / 100)
+          display_direct.fill_rect(rect_start, 22, rect_width, 7, 1)
+
+        choice_idx = Board.display_menu_and_get_choice(current_menu, Board.main_display, -1, False)
+
+        if choice_idx == 0: # -
+          Board.buzzer.set_volume(volume - Buzzer.VOLUME_GRANULARITY 
+              if volume >= Buzzer.VOLUME_GRANULARITY else volume)
+        elif choice_idx == 1: # +
+          Board.buzzer.set_volume(volume + Buzzer.VOLUME_GRANULARITY 
+              if volume <= 100 - Buzzer.VOLUME_GRANULARITY else volume)
+        elif choice_idx == 2: # Back
+          display_direct.fill(0)
+          display_direct.show()
+          current_menu.change_highlight(0) # reset highlight
+          current_menu = Menu.general_menu

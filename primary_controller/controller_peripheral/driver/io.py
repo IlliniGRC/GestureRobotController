@@ -114,14 +114,14 @@ class PWMOutput:
     cls.active_tasks_lock.release()
     
 
-  def __init__(self, id: int, mode: int, buf_size: int=50) -> None:
+  def __init__(self, id: int, mode: int, buf_size: int=50, freq: int=5000, duty: int=0) -> None:
     """ Initialize a new PWM controlled output using GPIO id
         `id`: id of the GPIO wished to be controlled using PWM """
     utils.ASSERT_TRUE(id not in PWMOutput.active_tasks.keys(), f"Duplicate PWMOut on pin [{id}]")
     utils.ASSERT_TRUE(mode == PWMOutput.DUTY_MODE or mode == PWMOutput.FREQ_MODE, f"Invalid PWMOut mode")
     self.__id = id
     self.__pin = machine.Pin(id, machine.Pin.OUT)
-    self.__pwm = machine.PWM(self.__pin, freq=5000, duty=0)
+    self.__pwm = machine.PWM(self.__pin, freq=freq, duty=duty)
     PWMOutput.active_tasks[self.__id] = (self, mode, PWMOutput._Info(buf_size))
 
   def change_duty_cycle(self, duty: int) -> None:
@@ -151,7 +151,7 @@ class VibrationMotor(PWMOutput):
   heavy_seq  = array.array('i', [410, 1, 615, 1, 819, 4, 615, 1, 410, 1, SEQ_END, 1])
 
   def __init__(self, id: int, buf_size: int = 50) -> None:
-    super().__init__(id, PWMOutput.DUTY_MODE, buf_size)
+    super().__init__(id, PWMOutput.DUTY_MODE, buf_size, freq=500, duty=0)
     self.__pwm.duty(0)
 
   def slight_vibration(self) -> bool:
@@ -191,6 +191,9 @@ class Buzzer(PWMOutput):
   GA = array.array('i', [26, 52, 104, 208, 415, 831, 1661, 3322, 6645])
   PAUSE = 1
 
+  VOLUME_MAX = 4000
+  VOLUME_GRANULARITY = 10
+
   START_UP = array.array('i', [C[6], 2, D[6], 2, E[6], 2, F[6], 2, G[6], 2, SEQ_END, 2])
   
   MYSTERY = array.array("i", [
@@ -201,14 +204,23 @@ class Buzzer(PWMOutput):
     G[5], 4, A[5], 4, C[6], 4, A[5], 4, G[6], 12, B[5], 12, C[6], 18, 
     G[5], 4, A[5], 4, C[6], 4, A[5], 4, C[6], 12, D[6], 12, B[5], 4, A[5], 4, G[5], 4, D[6], 8, C[6], 22])
 
-  def __init__(self, id: int, buf_size: int = 200) -> None:
-    super().__init__(id, PWMOutput.FREQ_MODE, buf_size)
-    self.__pwm.freq(1)
-    self.__pwm.duty(50)
+  def __init__(self, id: int, volume: int, buf_size: int = 200) -> None:
+    super().__init__(id, PWMOutput.FREQ_MODE, buf_size, freq=1, duty=0)
+    self.__volume = volume
+    self.set_volume(self.__volume)
   
-  def change_volume(self, percentage: float) -> None:
-    utils.EXPECT_TRUE(percentage >= 0 and percentage <= 1, "Buzzer invalid volume percentage")
-    self.__pwm.duty(int(100 * percentage))
+  def set_volume(self, percentage: int) -> None:
+    utils.EXPECT_TRUE(percentage >= 0 and percentage <= 100, "Buzzer invalid volume percentage")
+    self.__volume = percentage // Buzzer.VOLUME_GRANULARITY * Buzzer.VOLUME_GRANULARITY
+    self.__pwm.duty_u16(Buzzer.VOLUME_MAX * self.__volume // 100)
+    try:
+      with open("data/volume.settings", "w") as f:
+        f.write(f"{self.__volume}")
+    except Exception:
+      pass
+
+  def get_volume(self) -> int:
+    return self.__volume
 
   def sound_bootup(self) -> bool:
     return self.custom_sound(Buzzer.START_UP)
