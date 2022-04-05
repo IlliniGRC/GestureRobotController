@@ -12,8 +12,9 @@ class WT901:
   LITTLE = "Little"
   HAND = "Hand"
   ARM = "Arm"
-  positions = [THUMB, INDEX, MIDDLE, RING, LITTLE, HAND, ARM]
-  initialized_positions = set()
+  avail_positions = [THUMB, INDEX, MIDDLE, RING, LITTLE, HAND, ARM]
+  inited_positions = {}
+  detected_imus = {}
   # Control words
   SAVE      = 0x00
   CALSW     = 0x01
@@ -88,9 +89,21 @@ class WT901:
   @classmethod
   def auxiliary_init(cls):
     identity_test = set(cls.NOT_ASSIGNED[0])
-    for label, *_ in cls.positions:
+    for label, *_ in cls.avail_positions:
       utils.ASSERT_TRUE(label not in identity_test, f"WT901 duplicated identities <{label}>")
       identity_test.add(label)
+
+  @classmethod
+  def detect_imus(cls, i2c: machine.SoftI2C):
+    addresses = i2c.scan()
+    for address in addresses:
+      if address not in cls.detected_imus:
+        cls.detected_imus[address] = WT901(address, i2c)
+
+  @classmethod
+  def deinit_all_imus(cls):
+    for imu in cls.detected_imus.values():
+      imu.assign_position(cls.NOT_ASSIGNED)
 
   def __init__(self, i2c_addr, i2c: machine.SoftI2C) -> None:
     self.__i2c = i2c
@@ -99,11 +112,11 @@ class WT901:
     self.__report_header = self.__position[0]
 
   def assign_position(self, position: str) -> None:
-    utils.ASSERT_TRUE(position in WT901.positions, "WT901 no such position")
-    utils.ASSERT_TRUE(position not in WT901.initialized_positions, f"WT901 position {position} already initialized")
-    WT901.initialized_positions.add(position)
+    utils.ASSERT_TRUE(position in WT901.avail_positions, f"WT901 no such position <{position}>")
+    utils.ASSERT_TRUE(position not in WT901.inited_positions, f"WT901 position <{position}> already initialized")
     self.__position = position
     self.__report_header = position[0]
+    WT901.inited_positions[position] = self
 
   def get_angle_raw(self):
     ret = self.__i2c.readfrom_mem(self.__i2c_addr, WT901.Roll, 6)

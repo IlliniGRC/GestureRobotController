@@ -2,7 +2,6 @@ import time
 import driver.utils as utils
 
 from functionality.board import Board
-from functionality.menu import Menu
 from functionality.communication import Communication as Com
 
 # controls if start screen should be shown
@@ -20,15 +19,18 @@ def main():
 
   # waiting for main controller to connect
   while True:
-    msg = Board.uart1_com.read_all(Com.START)
+    msg = Board.uart1_com.read_all(Com.BOOT_UP)
     if msg != None:
-      Board.uart1_com.send(Com.START, Com.BOOT_UP)
+      Board.uart1_com.send(Com.BOOT_UP, "")
       break
     time.sleep_ms(100)
 
   # wait for start screen to finish if not already
   while not utils.start_screen_exited():
     time.sleep_ms(200)
+
+  # discard all unread bootup signals
+  Board.uart1_com.discard_all(Com.BOOT_UP)
 
   # undisplay initialization screen
   if show_start_screen:

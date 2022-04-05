@@ -3,34 +3,23 @@ import driver.utils as utils
 
 from functionality.board import Board
 from functionality.wt901 import WT901
+from functionality.communication import Communication as Com
 
 def main():
   """ Main function, contains event loop """
   # auxiliary initializations
   Board.auxiliary_init()
 
-  # Example useage of Board.uart1 and Board.button
-  #
-  # while True:
-  #   # UART
-  #   if Board.is_uart1_pending():
-  #     messages = Board.get_all_uart1_message()
-  #     print(f"UART: {messages}")
-  #   time.sleep_ms(50)
-
-  imu0x50 = WT901(0x50, Board.i2c)
-  imu0x52 = WT901(0x52, Board.i2c)
-
+  # waiting for peripheral controller to connect
   while True:
-    # UART
-    uart1_msgs = Board.uart1_com.read_all(b'test')
-    if uart1_msgs != None:
-      print(f"UART: {uart1_msgs}")
+    msg = Board.uart1_com.read_all(Com.BOOT_UP)
+    if msg != None:
+      break
+    Board.uart1_com.send(Com.BOOT_UP, "")
+    Board.status_led.show_info()
+    time.sleep_ms(1000)
 
-    # print(f"50: {imu0x50.get_angle()}", end="")
-    # print(f"52: {imu0x52.get_angle()}")
-    time.sleep_ms(100)
-
+  Board.event_loop()
 
 if __name__ == '__main__':
   # !!! Do NOT modify this function !!!
