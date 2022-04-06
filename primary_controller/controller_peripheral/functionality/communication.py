@@ -107,11 +107,13 @@ class Communication:
         return msgs
       time.sleep_ms(100)
 
-  def wait_for_reject_or_confirm(self) -> bool:
+  def wait_for_reject_or_confirm(self) -> tuple:
     while True:
       if Communication.REJECT in self.__pending_categories:
-        print(f"REJECT: {self.read(Communication.REJECT)}")
-        return False
+        msg = self.read(Communication.REJECT).decode()
+        print(f"REJECT: {msg}")
+        return False, msg
       if Communication.CONFIRM in self.__pending_categories:
-        return True
+        msg = self.read(Communication.CONFIRM).decode()
+        return True, msg
       time.sleep_ms(100)

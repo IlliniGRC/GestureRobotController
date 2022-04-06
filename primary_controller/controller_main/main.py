@@ -19,6 +19,9 @@ def main():
     Board.status_led.show_info()
     time.sleep_ms(1000)
 
+  time.sleep_ms(200)
+  Board.uart1_com.discard_all(Com.BOOT_UP)
+  
   Board.event_loop()
 
 if __name__ == '__main__':

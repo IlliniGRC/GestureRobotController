@@ -10,7 +10,7 @@ from functionality.menu import Menu
 from functionality.snake import SnakeGame
 from functionality.config import Config
 from functionality.text_viewer import TextViewer
-from functionality.communication import Communication
+from functionality.communication import Communication as Com
 
 def uart1_rx_callback() -> None:
   """ Callback function that called every time uart1 received message(s) """
@@ -77,7 +77,7 @@ class Board:
     Menu.auxiliary_init()
     Config.auxiliary_init()
     
-    cls.uart1_com = Communication()
+    cls.uart1_com = Com()
     
     cls.button25 = Button(25)
     cls.button26 = Button(26)
@@ -347,6 +347,9 @@ class Board:
   @classmethod
   def load_menu(cls):
     """ Main menu loop, blocks forever """
+    # get direct control of the main display
+    display_direct = Board.main_display.get_direct_control()
+
     # set current display to main menu
     current_menu = Menu.main_menu
 
@@ -383,7 +386,43 @@ class Board:
 
         if choice_idx == 0: # Change Volume
           current_menu = Menu.volume_menu
-        elif choice_idx == 1: # Back
+        elif choice_idx == 1: # View IMU polling rate
+          cls.uart1_com.send(Com.IMU, Com.SPEED)
+          display_direct.fill(0)
+          display_direct.text("Estimation", 24, 24, 1)
+          display_direct.text("In Progress...", 8, 32, 1)
+          display_direct.show()
+          status, msg = cls.uart1_com.wait_for_reject_or_confirm()
+          if status:
+            try:
+              preprocess = msg.split(",")
+              preprocess[0][0] == "E" and preprocess[1][0] == "Q"
+            except Exception:
+              utils.EXPECT_TRUE(False, "IMU estimation report format invlid")
+              status = False
+          if status: 
+            display_direct.fill(0)
+            display_direct.text("Euclidean:", 24, 4, 1)
+            display_direct.text("Quarternion:", 16, 28, 1)
+            if preprocess[0][0] == "E":
+              displayed_msg = f"{preprocess[0][1:]} it/s"
+            else:
+              displayed_msg = "Unknown"
+            display_direct.text(displayed_msg, 64 - len(displayed_msg) * 4, 16)
+            if preprocess[1][0] == "Q":
+              displayed_msg = f"{preprocess[1][1:]} it/s"
+            else:
+              displayed_msg = "Unknown"
+            display_direct.text(displayed_msg, 64 - len(displayed_msg) * 4, 40)
+          else:
+            display_direct.fill(0)
+            display_direct.text("No available IMU", 0, 24, 1)
+          Menu.B_menu.change_x_offset(47)
+          Menu.B_menu.change_y_offset(51)
+          cls.display_menu_and_get_choice(Menu.B_menu, cls.main_display)
+          Board.main_display.clear_screen()
+          current_menu = Menu.general_menu
+        elif choice_idx == 2: # Back
           current_menu.change_highlight(0) # reset highlight
           current_menu = Menu.settings_menu
 
@@ -414,7 +453,6 @@ class Board:
 
       elif current_menu == Menu.volume_menu:
         volume = Board.buzzer.get_volume()
-        display_direct = Board.main_display.get_direct_control()
         display_direct.fill(0)
         display_direct.text("Volume", 40, 9, 1)
         display_direct.text(f"{volume:3}", 4, 22, 1)

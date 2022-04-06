@@ -102,7 +102,6 @@ class Board:
         index = 0
         for imu in imus:
           index = imu.get_quaternion_report(buffer, index)
-        # print(buffer)
       end = time.time_ns()
     else:
       start = time.time_ns()
@@ -110,7 +109,6 @@ class Board:
         index = 0
         for imu in imus:
           index = imu.get_angle_report(buffer, index)
-        # print(buffer)
       end = time.time_ns()
     return iter_count * len(imus) * 10e8 / (end - start)
 
@@ -137,8 +135,11 @@ class Board:
             cls.uart1_com.send(Com.REJECT, f"No IMUs detected")
           else:
             imus = list(WT901.detected_imus.values())
-            cls.uart1_com.send(Com.IMU, 
-                f"E{cls.estimate_polling_rate(imus, 5000)},Q{cls.estimate_polling_rate(imus, 5000, True)}")
+            try:
+              cls.uart1_com.send(Com.CONFIRM, 
+                  f"E{cls.estimate_polling_rate(imus, 5000)},Q{cls.estimate_polling_rate(imus, 5000, True)}")
+            except Exception:
+              cls.uart1_com.send(Com.REJECT, f"IMU disconnected during process")
           cls.state = cls.State.IDLE
         elif msg == Com.BULK: # setting imu position
           cls.uart1_com.send(Com.CONFIRM, Com.BULK)
@@ -170,7 +171,6 @@ class Board:
               cls.uart1_com.send(Com.REJECT, warning_msg)
               continue
             WT901.detected_imus[address].assign_position(position)
-            print(f"<{address}> At <{position}>")
             cls.uart1_com.send(Com.CONFIRM, "")
         elif msg == Com.BEGIN: # begin operation
           cls.uart1_com.send(Com.CONFIRM, Com.BEGIN)

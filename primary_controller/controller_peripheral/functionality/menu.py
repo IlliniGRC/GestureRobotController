@@ -41,8 +41,9 @@ class Menu:
     cls.settings_menu.add_choice(48, 52, ["Back"])
 
     cls.general_menu = Menu()
-    cls.general_menu.add_choice(40, 14, ["Volume"])
-    cls.general_menu.add_choice(48, 32, ["Back"])
+    cls.general_menu.add_choice(40, 10, ["Volume"])
+    cls.general_menu.add_choice(16, 24, ["Estimate IMU", "Polling Rate"])
+    cls.general_menu.add_choice(48, 46, ["Back"])
 
     cls.configs_menu = Menu()
     cls.configs_menu.add_choice(20, 9, ["Load Config"])
