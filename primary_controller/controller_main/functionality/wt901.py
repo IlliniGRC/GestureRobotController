@@ -78,6 +78,10 @@ class WT901:
   GPSYAW    = 0x4e
   GPSVL     = 0x4f
   GPSVH     = 0x50 
+  Q0        = 0x51
+  Q1        = 0x51
+  Q2        = 0x51
+  Q3        = 0x51
 
   DIO_MODE_AIN   = 0
   DIO_MODE_DIN   = 1
@@ -103,7 +107,7 @@ class WT901:
   @classmethod
   def deinit_all_imus(cls):
     for imu in cls.detected_imus.values():
-      imu.assign_position(cls.NOT_ASSIGNED)
+      imu.unassign_position()
 
   def __init__(self, i2c_addr, i2c: machine.SoftI2C) -> None:
     self.__i2c = i2c
@@ -115,8 +119,14 @@ class WT901:
     utils.ASSERT_TRUE(position in WT901.avail_positions, f"WT901 no such position <{position}>")
     utils.ASSERT_TRUE(position not in WT901.inited_positions, f"WT901 position <{position}> already initialized")
     self.__position = position
-    self.__report_header = position[0]
+    self.__report_header = self.__position[0]
     WT901.inited_positions[position] = self
+
+  def unassign_position(self) -> None:
+    if self.__position != WT901.NOT_ASSIGNED:
+      WT901.inited_positions.pop(self.__position)
+    self.__position = WT901.NOT_ASSIGNED
+    self.__report_header = self.__position[0]
 
   def get_angle_raw(self):
     ret = self.__i2c.readfrom_mem(self.__i2c_addr, WT901.Roll, 6)
@@ -135,3 +145,9 @@ class WT901:
     buf[start_idx + 1:start_idx + 7] = self.__i2c.readfrom_mem(self.__i2c_addr, WT901.Roll, 6)
     buf[start_idx + 7] = 10 # encoding for \n
     return start_idx + 8
+
+  def get_quaternion_report(self, buf: bytearray, start_idx: int) -> int:
+    buf[start_idx] = ord(self.__report_header)
+    buf[start_idx + 1:start_idx + 9] = self.__i2c.readfrom_mem(self.__i2c_addr, WT901.Q0, 8)
+    buf[start_idx + 9] = 10 # encoding for \n
+    return start_idx + 10

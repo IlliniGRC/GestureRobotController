@@ -1,7 +1,6 @@
 import machine, _thread, time, array
 
 import driver.utils as utils
-from driver.uart import UART
 from driver.status_led import StatusLed
 
 from functionality.wt901 import WT901
@@ -94,16 +93,25 @@ class Board:
     return cls.i2c.scan()
 
   @classmethod
-  def estimate_polling_rate(cls, imus: list, count: int) -> float:
-    buffer = bytearray(150)
+  def estimate_polling_rate(cls, imus: list, count: int, quaternion: bool=False) -> float:
+    buffer = bytearray(200)
     iter_count = count // len(imus)
-    start = time.time_ns()
-    for _ in range(iter_count):
-      index = 0
-      for imu in imus:
-        index = imu.get_angle_report(buffer, index)
-      # print(buffer)
-    end = time.time_ns()
+    if quaternion:
+      start = time.time_ns()
+      for _ in range(iter_count):
+        index = 0
+        for imu in imus:
+          index = imu.get_quaternion_report(buffer, index)
+        # print(buffer)
+      end = time.time_ns()
+    else:
+      start = time.time_ns()
+      for _ in range(iter_count):
+        index = 0
+        for imu in imus:
+          index = imu.get_angle_report(buffer, index)
+        # print(buffer)
+      end = time.time_ns()
     return iter_count * len(imus) * 10e8 / (end - start)
 
   @classmethod
@@ -128,8 +136,9 @@ class Board:
           if len(WT901.detected_imus) == 0: # No IMUs available
             cls.uart1_com.send(Com.REJECT, f"No IMUs detected")
           else:
+            imus = list(WT901.detected_imus.values())
             cls.uart1_com.send(Com.IMU, 
-                f"{cls.estimate_polling_rate(list(WT901.detected_imus.values()), 5000)} it/s")
+                f"E{cls.estimate_polling_rate(imus, 5000)},Q{cls.estimate_polling_rate(imus, 5000, True)}")
           cls.state = cls.State.IDLE
         elif msg == Com.BULK: # setting imu position
           cls.uart1_com.send(Com.CONFIRM, Com.BULK)
@@ -140,6 +149,7 @@ class Board:
             msg = cls.uart1_com.blocking_read(Com.IMU)
             if msg == Com.TERMINATE:
               cls.uart1_com.send(Com.TERMINATE, Com.BULK)
+              cls.state = cls.State.IDLE
               break
             preprocess = msg.split(b',')
             address = int(preprocess[0].decode())
@@ -158,7 +168,9 @@ class Board:
               warning_msg = f"Duplicated WT901 I2C Position <{position}>"
               utils.EXPECT_TRUE(False, warning_msg)
               cls.uart1_com.send(Com.REJECT, warning_msg)
+              continue
             WT901.detected_imus[address].assign_position(position)
+            print(f"<{address}> At <{position}>")
             cls.uart1_com.send(Com.CONFIRM, "")
         elif msg == Com.BEGIN: # begin operation
           cls.uart1_com.send(Com.CONFIRM, Com.BEGIN)
