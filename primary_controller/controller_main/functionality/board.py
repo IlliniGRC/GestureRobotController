@@ -130,6 +130,8 @@ class Board:
           cls.uart1_com.send(Com.IMU, report[:-1])
           cls.state = cls.State.IDLE
         elif msg == Com.SPEED: # imu polling speed
+          cls.status_led.show_info()
+          time.sleep_ms(100)
           WT901.detect_imus(cls.i2c)
           if len(WT901.detected_imus) == 0: # No IMUs available
             cls.uart1_com.send(Com.REJECT, f"No IMUs detected")
@@ -137,7 +139,7 @@ class Board:
             imus = list(WT901.detected_imus.values())
             try:
               cls.uart1_com.send(Com.CONFIRM, 
-                  f"E{cls.estimate_polling_rate(imus, 5000)},Q{cls.estimate_polling_rate(imus, 5000, True)}")
+                  f"E{cls.estimate_polling_rate(imus, 4000)},Q{cls.estimate_polling_rate(imus, 4000, True)}")
             except Exception:
               cls.uart1_com.send(Com.REJECT, f"IMU disconnected during process")
           cls.state = cls.State.IDLE

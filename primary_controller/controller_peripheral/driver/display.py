@@ -1,4 +1,4 @@
-import machine, _thread, time, random, framebuf, math
+import machine, _thread, time, random, framebuf, gc
 
 from driver.ssd1306 import SSD1306, SSD1306_I2C
 import driver.utils as utils
@@ -6,37 +6,9 @@ import driver.utils as utils
 
 class Drawing:
   """ Storage class for various drawings """
-  controller_logo = None
-  micropython_logo = None
-  warning_sign = None
-
-  @classmethod 
-  def main_init(cls) -> None:
-    """ Initializations that fulfill basic requirements for system to operate """
-    cls.controller_logo = Drawing((), False).create_controller_logo()
-    cls.micropython_logo = Drawing((), False).create_micropython_logo()
-
-  @classmethod 
-  def auxiliary_init(cls) -> None:
-    """ Initializations that fulfill full requirements for system to operate """
-    cls.warning_sign = Drawing((), False).create_warning_sign()
-
-  def __init__(self, dimension: tuple, create_canvas: bool = True) -> None:
-    """ Create a new Drawing
-        `dimension`: the dimension of the drawing, in the form of (x, y)
-        `create_canvas`: whether a storage space (bytearray) is created during initialization """
-    self.__dim = dimension
-    if create_canvas:
-      byte_height = math.ceil(dimension[1] / 8)
-      self.__canvas = framebuf.FrameBuffer(bytearray(dimension[0], byte_height), 
-          self.__dim[0], self.__dim[1], framebuf.MONO_VLSB)
-
-  def get_dimension(self) -> tuple:
-    """ Get the dimension of current Drawing
-        `returns`: the dimension of the drawing, in the form of (x, y) """
-    return self.__dim
-
-  def create_controller_logo(self) -> None:
+  
+  @classmethod
+  def get_controller_logo(cls) -> framebuf:
     """ Create a controller logo """
     img = [
         0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,
@@ -75,40 +47,31 @@ class Drawing:
         0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,
         0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,
         0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0]
-    self.__dim = (96, 44)
-    self.__canvas = framebuf.FrameBuffer(bytearray(img), 
-        self.__dim[0], self.__dim[1], framebuf.MONO_VLSB)
-    return self
+    canvas = framebuf.FrameBuffer(bytearray(img), 96, 44, framebuf.MONO_VLSB)
+    return canvas
 
-  def create_micropython_logo(self):
+  @classmethod
+  def get_micropython_logo(cls) -> framebuf:
     """ Create a micropython logo"""
-    self.__dim = (128, 32)
-    self.__canvas = framebuf.FrameBuffer(bytearray(128 * 32 // 8), 
-        self.__dim[0], self.__dim[1], framebuf.MONO_VLSB)
-    self.__canvas.fill_rect(0, 0, 32, 32, 1)
-    self.__canvas.fill_rect(2, 2, 28, 28, 0)
-    self.__canvas.vline(9, 8, 22, 1)
-    self.__canvas.vline(16, 2, 22, 1)
-    self.__canvas.vline(23, 8, 22, 1)
-    self.__canvas.fill_rect(26, 24, 2, 4, 1)
-    self.__canvas.text('POWERED BY', 40, 6, 1)
-    self.__canvas.text('MicroPython', 40, 18, 1)
-    return self
+    canvas = framebuf.FrameBuffer(bytearray(128 * 32 // 8), 128, 32, framebuf.MONO_VLSB)
+    canvas.fill_rect(0, 0, 32, 32, 1)
+    canvas.fill_rect(2, 2, 28, 28, 0)
+    canvas.vline(9, 8, 22, 1)
+    canvas.vline(16, 2, 22, 1)
+    canvas.vline(23, 8, 22, 1)
+    canvas.fill_rect(26, 24, 2, 4, 1)
+    canvas.text('POWERED BY', 40, 6, 1)
+    canvas.text('MicroPython', 40, 18, 1)
+    return canvas
 
-  def create_warning_sign(self):
+  @classmethod
+  def get_warning_sign(cls) -> framebuf:
     """ Create a warning sign"""
     img = [  
       0,   0,   0,   0, 192,  96,  24, 230, 230,  24,  96, 192,   0,   0,   0,   0, 
       0,  48,  44,  35,  32,  32,  32,  43,  43,  32,  32,  32,  35,  44,  48,   0]
-    self.__dim = (16, 15)
-    self.__canvas = framebuf.FrameBuffer(bytearray(img), self.__dim[0], self.__dim[1], framebuf.MONO_VLSB)
-    return self
-
-  def get_framebuf(self) -> framebuf.FrameBuffer:
-    """ Get the framebuf of current drawing, used when trying to render to display
-        `returns`: the framebuf of given Drawing"""
-    return self.__canvas
-
+    canvas = framebuf.FrameBuffer(bytearray(img), 16, 15, framebuf.MONO_VLSB)
+    return canvas
 
 class OLED:
   """ Drives the SSD1306 OLED using I2C, async operation supported """
@@ -243,10 +206,10 @@ class OLED:
     step = 8
     utils.ASSERT_TRUE(OLED.WIDTH / step == OLED.WIDTH // step, "Invalid start screen step size")
     utils.ASSERT_TRUE(OLED.WIDTH // step - interval > 0, "Invalid start screen interval size")
-    micropython_framebuf = Drawing.micropython_logo.get_framebuf()
-    controller_framebuf = Drawing.controller_logo.get_framebuf()
+    micropython_framebuf = Drawing.get_micropython_logo()
+    controller_framebuf = Drawing.get_controller_logo()
     
-    controller_dim = Drawing.controller_logo.get_dimension()
+    controller_dim = (96, 44)
     lft_off, top_off = (OLED.WIDTH - controller_dim[0]) // 2, (64 - controller_dim[1]) // 2
     self.__ssd1306.fill(1)
     self.__ssd1306.blit(controller_framebuf, lft_off, top_off, -1, OLED.INVERSE_PALETTE)
@@ -281,6 +244,7 @@ class OLED:
     self.__ssd1306.show()
 
     self.lock.release()
+    gc.collect()
 
   def display_no_connection(self):
     """ Display the no connection screen """
@@ -288,8 +252,8 @@ class OLED:
       return False
     
     self.__ssd1306.fill(0)
-    self.__ssd1306.blit(Drawing.controller_logo.get_framebuf(), 12, 8)
-    self.__ssd1306.blit(Drawing.warning_sign.get_framebuf(), 86, 24)
+    self.__ssd1306.blit(Drawing.get_controller_logo(), 12, 8)
+    self.__ssd1306.blit(Drawing.get_warning_sign(), 86, 24)
     self.__ssd1306.text("No Connection", 12, 54, 1)
     self.__ssd1306.show()
 
@@ -300,6 +264,7 @@ class OLED:
     self.__ssd1306.show()
       
     self.lock.release()
+    gc.collect()
 
   def display_fatal(self):
     """ Display fatal error screen, TO BE IMPLEMENTED """

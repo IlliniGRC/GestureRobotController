@@ -62,16 +62,14 @@ class Board:
 
     # Status led initialization must be the first
     cls.status_led = StatusLed()
-
-    Drawing.main_init()
     
     cls.main_display = OLED(0x3C)
+    cls.secondary_display = OLED(0x3D)
 
 
   @classmethod
   def auxiliary_init(cls) -> None:
     """ Initializations that fulfill full requirements for system to operate """
-    Drawing.auxiliary_init()
     PWMOutput.auxiliary_init()
     
     Menu.auxiliary_init()
@@ -107,35 +105,6 @@ class Board:
   def end_operation(cls) -> None:
     """ End operation of all facilities """
     cls.uart1_com.finish()
-
-  @classmethod
-  def is_uart1_pending(cls) -> bool:
-    """ Whether uart1 have pending messages 
-        `returns`: whether uart1 have pending messages """
-    return cls.uart1_pending
-
-  @classmethod
-  def get_uart1_message(cls) -> str:
-    """ Get one of the pending uart message
-        `returns`: first pending uart message, None if no pending messages """
-    cls.uart1_pending_lock.acquire()
-    message = cls.uart1_queue.dequeue()
-    if cls.uart1_queue.is_empty():
-      cls.uart1_pending = False
-    cls.uart1_pending_lock.release()
-    return message
-
-  @classmethod
-  def get_all_uart1_message(cls) -> list:
-    """ Get all of the pending uart messages
-        `returns`: list of pending uart messages """
-    cls.uart1_pending_lock.acquire()
-    messages = []
-    while not cls.uart1_queue.is_empty():
-      messages.append(cls.uart1_queue.dequeue())
-    cls.uart1_pending = False
-    cls.uart1_pending_lock.release()
-    return messages
 
   @classmethod
   def is_button_pending(cls) -> bool:
@@ -212,7 +181,7 @@ class Board:
       reset_idx: int=-1, undisplay: bool=True) -> int:
     """ Display given menu on given display, expecting user to use on-board buttons
         to select desired option, return the choice index after user finished choosing,
-        blocking 
+        blocking. Notice, the method will acquire display lock internally
         `menu`: the menu to be displayed onto screen
         `display`: the OLED for the menu to be displayed on
         `reset_idx`: index of choice to be highlighted after choosing, -1 if no need to reset
@@ -238,18 +207,6 @@ class Board:
     return choice_idx
 
   @classmethod
-  def user_keyboard_input(cls, display: OLED) -> str:
-    """ Helpper function, display keyboard to the user on given display, expect user to input 
-        one character. Will clear screen on confirm or cancel, will not reset keyboard highlight
-        `display`: the OLED for keyboard to be displayed on """
-    choice_idx = cls.display_menu_and_get_choice(Menu.keyboard, display, -1, undisplay=False)
-    ret = Menu.keyboard_sequence[choice_idx]
-    if ret == '\x06' or ret == '\x18':
-      Menu.keyboard.undisplay_choices(display)
-      Menu.keyboard.change_highlight(0)
-    return ret
-
-  @classmethod
   def display_keyboard_and_get_input(cls, display: OLED, title: str, title_x_offset: int=0,
       initial_string: str="", initial_key: str="Q") -> str:
     """ Display keyboard to the user on given display, expecting user to use on-board buttons 
@@ -267,6 +224,21 @@ class Board:
     ustring_max_len = 14
 
     gc.collect()
+
+    keyboard = Menu()
+    line_start = 10
+    for i in range(11):
+      keyboard.add_choice(line_start + i * 10, 24, [Menu.keyboard_sequence[i]])
+    line_start = 15
+    for i in range(10):
+      keyboard.add_choice(line_start + i * 10, 33, [Menu.keyboard_sequence[i + 11]])
+    line_start = 20
+    for i in range(7):
+      keyboard.add_choice(line_start + i * 10, 42, [Menu.keyboard_sequence[i + 21]])
+    keyboard.add_choice(92, 42, ["<-"])
+    keyboard.add_choice(8, 51, ["Confirm"])
+    keyboard.add_choice(72, 51, ["Cancel"])
+
     initial_string, initial_key = initial_string.upper(), initial_key.upper()
     utils.ASSERT_TRUE(len(initial_string) <= ustring_max_len, 
         f"Keyboard input preset sequence <{initial_string}> exceed maximum length {ustring_max_len}")
@@ -277,7 +249,7 @@ class Board:
     display_direct.text(title, title_x_offset, title_y_offset, 1)
 
     user_string = initial_string
-    Menu.keyboard.change_highlight(Menu.keyboard_sequence.index(initial_key))
+    keyboard.change_highlight(Menu.keyboard_sequence.index(initial_key))
 
     while True:
       display_direct.fill_rect(0, ustring_y_offset, 128, OLED.CHAR_HEIGHT, 0)
@@ -286,7 +258,7 @@ class Board:
         display_direct.fill_rect(ustring_x_offset + len(user_string) * OLED.CHAR_WIDTH, 
             ustring_y_offset, 3, OLED.CHAR_HEIGHT - 1, 1)
 
-      char = Board.user_keyboard_input(display)
+      char = Board.user_keyboard_input(display, keyboard)
 
       if char == '\x08': # backspace
         user_string = user_string[:-1]
@@ -303,6 +275,20 @@ class Board:
     display_direct.show()
     gc.collect()
     return user_string
+
+  @classmethod
+  def user_keyboard_input(cls, display: OLED, keyboard: Menu) -> str:
+    """ Helpper function, display keyboard to the user on given display, expect user to input 
+        one character. Will clear screen on confirm or cancel, will not reset keyboard highlight.
+        Notice, this method is helpper function for <display_keyboard_and_get_input>, do NOT 
+        call directly.
+        `display`: the OLED for keyboard to be displayed on """
+    choice_idx = cls.display_menu_and_get_choice(keyboard, display, -1, undisplay=False)
+    ret = Menu.keyboard_sequence[choice_idx]
+    if ret == '\x06' or ret == '\x18':
+      keyboard.undisplay_choices(display)
+      keyboard.change_highlight(0)
+    return ret
 
   @classmethod
   def begin_text_viewer(cls, display: OLED, text: str, 
@@ -333,14 +319,55 @@ class Board:
           should_exit = cls.text_viewer.PNE_menu_choose()
           if should_exit:
             break
-
         display.lock.acquire()
         display.get_direct_control().fill(0)
         display.lock.release()
         cls.text_viewer.view_on_display(display)
-      
       time.sleep_ms(50)
-    
+    gc.collect()
+    display.clear_screen()
+  
+  @classmethod
+  def estimate_polling_rate_and_display(cls, display: OLED) -> None:
+    gc.collect()
+    display_direct = display.get_direct_control()
+
+    # ask main controller to estimate polling speed of IMUs
+    cls.uart1_com.send(Com.IMU, Com.SPEED)
+    # acquire display lock and start displaying waiting message
+    display.lock.acquire()
+    display_direct.fill(0)
+    display_direct.text("Estimation", 24, 20, 1)
+    display_direct.text("In Progress...", 8, 36, 1)
+    display_direct.show()
+    # wait until main controller responds with reject or confirm
+    status, msg = cls.uart1_com.wait_for_reject_or_confirm()
+    if status: # confirm
+      try:
+        preprocess = msg.split(",")
+        preprocess[0][0] == "E" and preprocess[1][0] == "Q"
+      except Exception: # invalid report format
+        utils.EXPECT_TRUE(False, "IMU estimation report format invlid")
+        status = False
+    if status: # confirm and valid report format
+      display_direct.fill(0)
+      # Euclidean report
+      display_direct.text("Euclidean:", 24, 4, 1)
+      displayed_msg = f"{preprocess[0][1:]} it/s"
+      display_direct.text(displayed_msg, 64 - len(displayed_msg) * 4, 16)
+      # quarternion report
+      display_direct.text("Quarternion:", 16, 28, 1)
+      displayed_msg = f"{preprocess[1][1:]} it/s"
+      display_direct.text(displayed_msg, 64 - len(displayed_msg) * 4, 40)
+    else: # reject
+      display_direct.fill(0)
+      display_direct.text("No available IMU", 0, 24, 1)
+    # display back menu
+    Menu.B_menu.change_x_offset(47)
+    Menu.B_menu.change_y_offset(51)
+    display.lock.release()
+    cls.display_menu_and_get_choice(Menu.B_menu, display)
+    # clear screen and release display lock
     display.clear_screen()
     gc.collect()
 
@@ -371,7 +398,7 @@ class Board:
         elif choice_idx == 1:
           current_menu = Menu.configs_menu
         elif choice_idx == 2: # Snake
-          Board.begin_snake_game(Board.main_display, max_score=20)
+          Board.begin_snake_game(Board.main_display, max_score=40)
           current_menu = Menu.settings_menu
         elif choice_idx == 3: # Mystery
           Board.buzzer.sound_mystery()
@@ -387,40 +414,7 @@ class Board:
         if choice_idx == 0: # Change Volume
           current_menu = Menu.volume_menu
         elif choice_idx == 1: # View IMU polling rate
-          cls.uart1_com.send(Com.IMU, Com.SPEED)
-          display_direct.fill(0)
-          display_direct.text("Estimation", 24, 24, 1)
-          display_direct.text("In Progress...", 8, 32, 1)
-          display_direct.show()
-          status, msg = cls.uart1_com.wait_for_reject_or_confirm()
-          if status:
-            try:
-              preprocess = msg.split(",")
-              preprocess[0][0] == "E" and preprocess[1][0] == "Q"
-            except Exception:
-              utils.EXPECT_TRUE(False, "IMU estimation report format invlid")
-              status = False
-          if status: 
-            display_direct.fill(0)
-            display_direct.text("Euclidean:", 24, 4, 1)
-            display_direct.text("Quarternion:", 16, 28, 1)
-            if preprocess[0][0] == "E":
-              displayed_msg = f"{preprocess[0][1:]} it/s"
-            else:
-              displayed_msg = "Unknown"
-            display_direct.text(displayed_msg, 64 - len(displayed_msg) * 4, 16)
-            if preprocess[1][0] == "Q":
-              displayed_msg = f"{preprocess[1][1:]} it/s"
-            else:
-              displayed_msg = "Unknown"
-            display_direct.text(displayed_msg, 64 - len(displayed_msg) * 4, 40)
-          else:
-            display_direct.fill(0)
-            display_direct.text("No available IMU", 0, 24, 1)
-          Menu.B_menu.change_x_offset(47)
-          Menu.B_menu.change_y_offset(51)
-          cls.display_menu_and_get_choice(Menu.B_menu, cls.main_display)
-          Board.main_display.clear_screen()
+          cls.estimate_polling_rate_and_display(Board.main_display)
           current_menu = Menu.general_menu
         elif choice_idx == 2: # Back
           current_menu.change_highlight(0) # reset highlight

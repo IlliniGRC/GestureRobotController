@@ -56,20 +56,6 @@ class Menu:
     cls.volume_menu.add_choice(82, 35, ["+"])
     cls.volume_menu.add_choice(48, 48, ["Back"])
 
-    cls.keyboard = Menu()
-    line_start = 10
-    for i in range(11):
-      cls.keyboard.add_choice(line_start + i * 10, 24, [cls.keyboard_sequence[i]])
-    line_start = 15
-    for i in range(10):
-      cls.keyboard.add_choice(line_start + i * 10, 33, [cls.keyboard_sequence[i + 11]])
-    line_start = 20
-    for i in range(7):
-      cls.keyboard.add_choice(line_start + i * 10, 42, [cls.keyboard_sequence[i + 21]])
-    cls.keyboard.add_choice(92, 42, ["<-"])
-    cls.keyboard.add_choice(8, 51, ["Confirm"])
-    cls.keyboard.add_choice(72, 51, ["Cancel"])
-
     cls.YN_menu = Menu()
     cls.YN_menu.add_choice(20, 1, ["Yes"])
     cls.YN_menu.add_choice(88, 1, ["No"])

@@ -52,6 +52,9 @@ class Communication:
       else:
         self.__message_queue[category] = [data]
     self.__message_lock.release()
+
+  def finish(self) -> None:
+    self.__uart1.finish()
   
   def pending_categories(self) -> set:
     return self.__pending_categories

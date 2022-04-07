@@ -176,7 +176,11 @@ class VibrationMotor(PWMOutput):
 
 class Buzzer(PWMOutput):
   """ Note: Frequency less than or equal to 610 cannot make the buzzer correctly function"""
-  SEQ_END = 1
+  # config files storage specifications
+  config_path = "data"
+  default_config_name = "volume.settings"
+
+  # notes
   A =  array.array('i', [28, 55, 110, 220, 440, 880, 1760, 3520, 7040])
   AB = array.array('i', [29, 55, 117, 233, 466, 932, 1865, 3729, 7459])
   B =  array.array('i', [31, 58, 123, 247, 494, 988, 1976, 3951, 7902])
@@ -190,6 +194,7 @@ class Buzzer(PWMOutput):
   G =  array.array('i', [25, 49, 98, 196, 392, 784, 1568, 3136, 6272])
   GA = array.array('i', [26, 52, 104, 208, 415, 831, 1661, 3322, 6645])
   PAUSE = 1
+  SEQ_END = 1
 
   VOLUME_MAX = 4000
   VOLUME_GRANULARITY = 10
@@ -214,7 +219,7 @@ class Buzzer(PWMOutput):
     self.__volume = percentage // Buzzer.VOLUME_GRANULARITY * Buzzer.VOLUME_GRANULARITY
     self.__pwm.duty_u16(Buzzer.VOLUME_MAX * self.__volume // 100)
     try:
-      with open("data/volume.settings", "w") as f:
+      with open(f"{Buzzer.config_path}/{Buzzer.default_config_name}", "w") as f:
         f.write(f"{self.__volume}")
     except Exception:
       pass
