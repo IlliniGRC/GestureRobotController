@@ -177,13 +177,13 @@ class Board:
     return choice_idx == 0
 
   @classmethod
-  def display_menu_and_get_choice(cls, menu: Menu, display: OLED, 
+  def display_menu_and_get_choice(cls, display: OLED, menu: Menu, 
       reset_idx: int=-1, undisplay: bool=True) -> int:
     """ Display given menu on given display, expecting user to use on-board buttons
         to select desired option, return the choice index after user finished choosing,
         blocking. Notice, the method will acquire display lock internally
-        `menu`: the menu to be displayed onto screen
         `display`: the OLED for the menu to be displayed on
+        `menu`: the menu to be displayed onto screen
         `reset_idx`: index of choice to be highlighted after choosing, -1 if no need to reset
         `undisplay`: undisplay the choices after choosing """
     gc.collect()
@@ -213,7 +213,7 @@ class Board:
         Notice, this method is helpper function for <display_keyboard_and_get_input>, do NOT 
         call directly.
         `display`: the OLED for keyboard to be displayed on """
-    choice_idx = cls.display_menu_and_get_choice(keyboard, display, -1, undisplay=False)
+    choice_idx = cls.display_menu_and_get_choice(display, keyboard, -1, undisplay=False)
     ret = Menu.keyboard_sequence[choice_idx]
     if ret == '\x06' or ret == '\x18':
       keyboard.undisplay_choices(display)
@@ -371,7 +371,7 @@ class Board:
     Menu.B_menu.change_x_offset(47)
     Menu.B_menu.change_y_offset(51)
     display.lock.release()
-    cls.display_menu_and_get_choice(Menu.B_menu, display)
+    cls.display_menu_and_get_choice(display, Menu.B_menu, undisplay=False)
     # clear screen and release display lock
     display.clear_screen()
     gc.collect()
@@ -406,7 +406,7 @@ class Board:
           Menu.B_menu.change_x_offset(47)
           Menu.B_menu.change_y_offset(51)
           display.lock.release()
-          cls.display_menu_and_get_choice(Menu.B_menu, display)
+          cls.display_menu_and_get_choice(display, Menu.B_menu, undisplay=False)
           display.lock.acquire()
           display_direct.fill(0)
           display.lock.release()
@@ -437,7 +437,7 @@ class Board:
     Menu.B_menu.change_x_offset(47)
     Menu.B_menu.change_y_offset(51)
     display.lock.release()
-    cls.display_menu_and_get_choice(Menu.B_menu, display)
+    cls.display_menu_and_get_choice(display, Menu.B_menu, undisplay=False)
     display.clear_screen()
 
   @classmethod
@@ -470,7 +470,7 @@ class Board:
         display_direct.text("Override?", 28, 40)
         display.lock.release()
         Menu.YN_menu.change_y_offset(51)
-        choice_idx = cls.display_menu_and_get_choice(Menu.YN_menu, display, 1)
+        choice_idx = cls.display_menu_and_get_choice(display, Menu.YN_menu, 1)
         if choice_idx == 0: # yes
           # force add current, overriding conflicted
           config.add_imu_to_config(position, address, True)
@@ -494,8 +494,12 @@ class Board:
     display_direct.fill(0)
     display_direct.text(f"IMU @ {hex(address)}", 0, 0)
     display.lock.release()
-    choice_idx = cls.display_menu_and_get_choice(imu_menu, display, undisplay=False)
+    choice_idx = cls.display_menu_and_get_choice(display, imu_menu, undisplay=False)
     return Config.IMU_AVAIL_POSITIONS[choice_idx]
+
+  @classmethod
+  def manage_config(cls, display: OLED):
+    pass
 
   @classmethod
   def change_volume(cls, display: OLED) -> None:
@@ -515,7 +519,7 @@ class Board:
         rect_width = int((rect_end - rect_start) * volume / 100)
         display_direct.fill_rect(rect_start, 22, rect_width, 7, 1)
     
-      choice_idx = Board.display_menu_and_get_choice(Menu.volume_menu, display, -1, False)
+      choice_idx = Board.display_menu_and_get_choice(display, Menu.volume_menu, undisplay=False)
       if choice_idx == 0: # -
         Board.buzzer.set_volume(volume - Buzzer.VOLUME_GRANULARITY 
             if volume >= Buzzer.VOLUME_GRANULARITY else volume)
@@ -541,7 +545,7 @@ class Board:
     # menu loop
     while True:
       if current_menu == Menu.main_menu:
-        choice_idx = Board.display_menu_and_get_choice(current_menu, Board.main_display, 0)
+        choice_idx = Board.display_menu_and_get_choice(Board.main_display, current_menu)
 
         if choice_idx == 0: # Start Operation
           current_menu = Menu.main_menu
@@ -549,7 +553,7 @@ class Board:
           current_menu = Menu.settings_menu
 
       elif current_menu == Menu.settings_menu:
-        choice_idx = Board.display_menu_and_get_choice(current_menu, Board.main_display, -1)
+        choice_idx = Board.display_menu_and_get_choice(Board.main_display, current_menu)
 
         if choice_idx == 0: # Load Config
           current_menu = Menu.general_menu
@@ -567,7 +571,7 @@ class Board:
           current_menu = Menu.main_menu
 
       elif current_menu == Menu.general_menu:
-        choice_idx = Board.display_menu_and_get_choice(current_menu, Board.main_display, -1)
+        choice_idx = Board.display_menu_and_get_choice(Board.main_display, current_menu)
 
         if choice_idx == 0: # Change Volume
           cls.change_volume(Board.main_display)
@@ -580,7 +584,7 @@ class Board:
           current_menu = Menu.settings_menu
 
       elif current_menu == Menu.configs_menu:
-        choice_idx = Board.display_menu_and_get_choice(current_menu, Board.main_display, -1)
+        choice_idx = Board.display_menu_and_get_choice(Board.main_display, current_menu)
 
         if choice_idx == 0: # Load Config
           current_menu = Menu.configs_menu
