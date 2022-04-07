@@ -6,8 +6,9 @@ class Config:
 
   # config files storage specifications
   config_path = "data"
-  default_config_name = "config.settings"
-  extension = ".config"
+  default_config_filename = "config.settings"
+  extension = "config"
+  no_default_config = "None"
   empty_file_string = None
 
   # JSON attributes
@@ -45,7 +46,7 @@ class Config:
   def auxiliary_init(cls):
     cls.empty_file_string = ujson.dumps(cls.get_empty_config())
     try:
-      with open(f"{cls.config_path}/{cls.default_config_name}") as f:
+      with open(f"{cls.config_path}/{cls.default_config_filename}"):
         pass
     except Exception:
       utils.ASSERT_TRUE(False, "Config default config not found")
@@ -53,7 +54,29 @@ class Config:
     utils.ASSERT_TRUE(len(Config.IMU_AVAIL_POSITIONS) <= 12, 
         "Config IMU available positions length should not exceed 12")
     for name in Config.IMU_AVAIL_POSITIONS:
-      utils.ASSERT_TRUE(type(name) == str and len(name) <= 7, "Config IMU name length should not exceed 7")
+      utils.ASSERT_TRUE(type(name) == str and len(name) <= 7, 
+          "Config IMU name length should not exceed 7")
+
+  @classmethod
+  def set_default_config(cls, filename: str) -> bool:
+    if filename not in cls.list_all_configs() and filename != cls.no_default_config:
+      utils.EXPECT_TRUE(False, f"Config nonexist file {filename}")
+      return False
+    with open(f"{cls.config_path}/{cls.default_config_filename}", "w") as f:
+      f.write(filename)
+    return True
+
+  @classmethod
+  def get_default_config(cls) -> str:
+    try:
+      with open(f"{cls.config_path}/{cls.default_config_filename}", "r") as f:
+        default_config = f.read().strip()
+    except Exception:
+      utils.ASSERT_TRUE(False, "Config default config not found")
+    if default_config not in cls.list_all_configs():
+      default_config = cls.no_default_config
+      cls.set_default_config(default_config)
+    return default_config
 
   @classmethod
   def get_empty_config(cls) -> list:
@@ -63,7 +86,7 @@ class Config:
   def list_all_configs(cls) -> list:
     ret = []
     for filename in os.listdir(cls.config_path):
-      if filename.endswith(Config.extension):
+      if filename.endswith(f".{Config.extension}"):
         ret.append(filename)
     return ret
   
@@ -78,23 +101,30 @@ class Config:
     self.__imu_dict = {}
 
   def associate_with_file(self, filename: str) -> None:
-    utils.ASSERT_TRUE(filename.endswith(Config.extension), f"Config <{filename}> invalid extension")
-    try:
-      with open(f"{Config.config_path}/{filename}"):
-        pass
-      self.__associative_file_name = filename
-    except Exception:
-      utils.ASSERT_TRUE(False, f"Config <{filename}> does not exist")
+    utils.EXPECT_TRUE(filename in Config.list_all_configs(), 
+        f"Config <{filename}> does not exist")
+    self.__associative_file_name = filename
 
-  def read_config_from_file(self) -> None:
-    utils.ASSERT_TRUE(self.__associative_file_name != None, "Config read no file associated with this config")
+  def read_config_from_file(self) -> bool:
+    if self.__associative_file_name == None:
+      utils.EXPECT_TRUE(False, "Config read no file associated with this config")
+      return False
     contents: dict = None
-    with open(f"{Config.config_path}/{self.__associative_file_name}") as f:
-      contents = ujson.loads(f.read())
-    utils.ASSERT_TRUE(Config.JATTR_VERSION in contents, "Config invalid file style")
-    utils.ASSERT_TRUE(contents[Config.JATTR_VERSION] == Config.VERSION, 
-        f"Config invalid version {contents[Config.JATTR_VERSION]}, expect {Config.VERSION}")
+    try:
+      with open(f"{Config.config_path}/{self.__associative_file_name}") as f:
+        contents = ujson.loads(f.read())
+    except Exception:
+      utils.EXPECT_TRUE(False, "Config invalid file style, cannot be parsed as json file")
+      return False
+    if Config.JATTR_VERSION not in contents:
+      utils.EXPECT_TRUE(False, "Config version not found")
+      return False
+    if contents[Config.JATTR_VERSION] != Config.VERSION:
+      utils.EXPECT_TRUE(False, 
+          f"Config invalid version <{contents[Config.JATTR_VERSION]}>, expect <{Config.VERSION}>")
+      return False
     self.__imu_dict = contents[Config.JATTR_IMU_BY_POSITION]
+    return True
 
   def write_config_to_file(self) -> None:
     utils.ASSERT_TRUE(self.__associative_file_name != None, "Config write no file associated with this config")
@@ -104,18 +134,20 @@ class Config:
       f.write(ujson.dumps(empty_config))
 
   def create_and_associate_config_file(self, filename: str) -> bool:
-    utils.ASSERT_TRUE(filename.endswith(Config.extension), f"Config <{filename}> invalid extension")
-    configs = Config.list_all_configs()
-    if filename in configs:
+    utils.ASSERT_TRUE(filename.endswith(f".{Config.extension}"), f"Config <{filename}> invalid extension")
+    if filename in Config.list_all_configs():
       return False
     with open(f"{Config.config_path}/{filename}", "w") as f:
       f.write(Config.empty_file_string)
     self.__associative_file_name = filename
     return True
 
-  def add_imu_to_config(self, imu_pos: str, i2c_addr: int) -> None:
-    utils.ASSERT_TRUE(imu_pos in Config.IMU_AVAIL_POSITIONS, f"Config invalid imu position name {imu_pos}")
+  def add_imu_to_config(self, imu_pos: str, i2c_addr: int, override: bool=False) -> bool:
+    utils.ASSERT_TRUE(imu_pos not in Config.IMU_AVAIL_POSITIONS, f"Config invalid imu position name <{imu_pos}>")
+    if not override and imu_pos in self.__imu_dict:
+      return False
     self.__imu_dict[imu_pos] = i2c_addr
+    return True
 
   def print_config(self) -> None:
     print(self.__imu_dict)

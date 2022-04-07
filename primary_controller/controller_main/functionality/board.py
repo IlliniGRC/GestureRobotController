@@ -127,7 +127,7 @@ class Board:
           addresses = cls.i2c_scan()
           for address in addresses:
             report += str(address) + ","
-          cls.uart1_com.send(Com.IMU, report[:-1])
+          cls.uart1_com.send(Com.CONFIRM, report[:-1])
           cls.state = cls.State.IDLE
         elif msg == Com.SPEED: # imu polling speed
           cls.status_led.show_info()

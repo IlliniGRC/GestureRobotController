@@ -207,6 +207,20 @@ class Board:
     return choice_idx
 
   @classmethod
+  def user_keyboard_input(cls, display: OLED, keyboard: Menu) -> str:
+    """ Helpper function, display keyboard to the user on given display, expect user to input 
+        one character. Will clear screen on confirm or cancel, will not reset keyboard highlight.
+        Notice, this method is helpper function for <display_keyboard_and_get_input>, do NOT 
+        call directly.
+        `display`: the OLED for keyboard to be displayed on """
+    choice_idx = cls.display_menu_and_get_choice(keyboard, display, -1, undisplay=False)
+    ret = Menu.keyboard_sequence[choice_idx]
+    if ret == '\x06' or ret == '\x18':
+      keyboard.undisplay_choices(display)
+      keyboard.change_highlight(0)
+    return ret
+
+  @classmethod
   def display_keyboard_and_get_input(cls, display: OLED, title: str, title_x_offset: int=0,
       initial_string: str="", initial_key: str="Q") -> str:
     """ Display keyboard to the user on given display, expecting user to use on-board buttons 
@@ -277,20 +291,6 @@ class Board:
     return user_string
 
   @classmethod
-  def user_keyboard_input(cls, display: OLED, keyboard: Menu) -> str:
-    """ Helpper function, display keyboard to the user on given display, expect user to input 
-        one character. Will clear screen on confirm or cancel, will not reset keyboard highlight.
-        Notice, this method is helpper function for <display_keyboard_and_get_input>, do NOT 
-        call directly.
-        `display`: the OLED for keyboard to be displayed on """
-    choice_idx = cls.display_menu_and_get_choice(keyboard, display, -1, undisplay=False)
-    ret = Menu.keyboard_sequence[choice_idx]
-    if ret == '\x06' or ret == '\x18':
-      keyboard.undisplay_choices(display)
-      keyboard.change_highlight(0)
-    return ret
-
-  @classmethod
   def begin_text_viewer(cls, display: OLED, text: str, 
       wrap_content:bool=True, delimiter: str="\n") -> None:
     """ Begin the operation of a text viewer using specified string
@@ -354,11 +354,13 @@ class Board:
       # Euclidean report
       display_direct.text("Euclidean:", 24, 4, 1)
       displayed_msg = f"{preprocess[0][1:]} it/s"
-      display_direct.text(displayed_msg, 64 - len(displayed_msg) * 4, 16)
+      display_direct.text(displayed_msg, 
+          64 - len(displayed_msg) * OLED.CHAR_WIDTH // 2, 16)
       # quarternion report
       display_direct.text("Quarternion:", 16, 28, 1)
       displayed_msg = f"{preprocess[1][1:]} it/s"
-      display_direct.text(displayed_msg, 64 - len(displayed_msg) * 4, 40)
+      display_direct.text(displayed_msg, 
+          64 - len(displayed_msg) * OLED.CHAR_WIDTH // 2, 40)
     else: # reject
       display_direct.fill(0)
       display_direct.text("No available IMU", 0, 24, 1)
@@ -370,6 +372,76 @@ class Board:
     # clear screen and release display lock
     display.clear_screen()
     gc.collect()
+
+  @classmethod
+  def create_config(cls, display: OLED) -> None:
+    gc.collect()
+    display_direct = display.get_direct_control()
+
+    user_string = ""
+    while True:
+      user_string = Board.display_keyboard_and_get_input(display, "File Name", 2, user_string)
+      if user_string == None: # Cancel
+        return
+      else: # Confirm
+        config = Config()
+        filename = f"{user_string}.{Config.extension}"
+        if not config.create_and_associate_config_file(filename):
+          # duplicated config file name
+          config_ext = f".{Config.extension}"
+          display_direct.text("Config", 4, 4)
+          display_direct.fill_rect(4, 14, 120, 24, 1)
+          display_direct.text(user_string, 4, 16, 0)
+          display_direct.text(config_ext, 120 - len(config_ext) * OLED.CHAR_WIDTH, 28, 0)
+          display_direct.text("already exists", 8, 40)
+          display_direct.show()
+          Menu.B_menu.change_x_offset(47)
+          Menu.B_menu.change_y_offset(51)
+          cls.display_menu_and_get_choice(Menu.B_menu, display)
+          display_direct.fill(0)
+          # ask user to re-enter a filename with current entered sequence retained
+          continue
+        cls.uart1_com.send(Com.IMU, Com.ADDRESS)
+        preprocess = cls.uart1_com.blocking_read(Com.CONFIRM).decode()
+        addresses = [int(address) for address in preprocess.split(",")]
+        for address in addresses:
+          cls.display_imus_and_get_choice(address)
+
+  @classmethod
+  def display_imus_and_get_choice(cls, address: int):
+    pass
+
+  @classmethod
+  def change_volume(cls, display: OLED) -> None:
+    gc.collect()
+    display_direct = display.get_direct_control()
+
+    while True:
+      volume = Board.buzzer.get_volume()
+      display_direct.fill(0)
+      display_direct.text("Volume", 40, 9, 1)
+      display_direct.text(f"{volume:3}", 4, 22, 1)
+      rect_start, rect_end = 30, 116
+      # empty outside
+      display_direct.rect(rect_start, 22, rect_end - rect_start, 7, 1)
+      if volume != 0:
+        # filled inside
+        rect_width = int((rect_end - rect_start) * volume / 100)
+        display_direct.fill_rect(rect_start, 22, rect_width, 7, 1)
+    
+      choice_idx = Board.display_menu_and_get_choice(Menu.volume_menu, display, -1, False)
+      if choice_idx == 0: # -
+        Board.buzzer.set_volume(volume - Buzzer.VOLUME_GRANULARITY 
+            if volume >= Buzzer.VOLUME_GRANULARITY else volume)
+      elif choice_idx == 1: # +
+        Board.buzzer.set_volume(volume + Buzzer.VOLUME_GRANULARITY 
+            if volume <= 100 - Buzzer.VOLUME_GRANULARITY else volume)
+      elif choice_idx == 2: # Back
+        display_direct.fill(0)
+        display_direct.show()
+        Menu.volume_menu.change_highlight(0) # reset highlight
+        gc.collect()
+        return
 
   @classmethod
   def load_menu(cls):
@@ -412,7 +484,8 @@ class Board:
         choice_idx = Board.display_menu_and_get_choice(current_menu, Board.main_display, -1)
 
         if choice_idx == 0: # Change Volume
-          current_menu = Menu.volume_menu
+          cls.change_volume(Board.main_display)
+          current_menu = Menu.general_menu
         elif choice_idx == 1: # View IMU polling rate
           cls.estimate_polling_rate_and_display(Board.main_display)
           current_menu = Menu.general_menu
@@ -426,15 +499,7 @@ class Board:
         if choice_idx == 0: # Load Config
           current_menu = Menu.configs_menu
         elif choice_idx == 1: # Create Config
-          user_string = Board.display_keyboard_and_get_input(Board.main_display, "File Name", 2)
-
-          if user_string == None: # Cancel
-            current_menu.change_highlight(0) # reset highlight
-            current_menu = Menu.main_menu
-          else: # Confirm
-            print(user_string)
-            current_menu = Menu.configs_menu
-
+          cls.create_config(Board.main_display)
         elif choice_idx == 2: # View Config
           with open("driver/status_led.py", "r") as f:
             # normal file contains "\r\n" as new line character
@@ -444,30 +509,3 @@ class Board:
         elif choice_idx == 3: # Back
           current_menu.change_highlight(0) # reset highlight
           current_menu = Menu.settings_menu
-
-      elif current_menu == Menu.volume_menu:
-        volume = Board.buzzer.get_volume()
-        display_direct.fill(0)
-        display_direct.text("Volume", 40, 9, 1)
-        display_direct.text(f"{volume:3}", 4, 22, 1)
-        rect_start, rect_end = 30, 116
-        # empty outside
-        display_direct.rect(rect_start, 22, rect_end - rect_start, 7, 1)
-        if volume != 0:
-          # filled inside
-          rect_width = int((rect_end - rect_start) * volume / 100)
-          display_direct.fill_rect(rect_start, 22, rect_width, 7, 1)
-
-        choice_idx = Board.display_menu_and_get_choice(current_menu, Board.main_display, -1, False)
-
-        if choice_idx == 0: # -
-          Board.buzzer.set_volume(volume - Buzzer.VOLUME_GRANULARITY 
-              if volume >= Buzzer.VOLUME_GRANULARITY else volume)
-        elif choice_idx == 1: # +
-          Board.buzzer.set_volume(volume + Buzzer.VOLUME_GRANULARITY 
-              if volume <= 100 - Buzzer.VOLUME_GRANULARITY else volume)
-        elif choice_idx == 2: # Back
-          display_direct.fill(0)
-          display_direct.show()
-          current_menu.change_highlight(0) # reset highlight
-          current_menu = Menu.general_menu
