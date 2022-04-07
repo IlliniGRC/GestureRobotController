@@ -418,17 +418,39 @@ class Board:
     display.display_loading_screen()
     display_direct.show()
     display.lock.release()
-
+    # get all I2C addresses from the main controller
     cls.uart1_com.send(Com.IMU, Com.ADDRESS)
     preprocess = cls.uart1_com.blocking_read(Com.CONFIRM).decode()
     addresses = set([int(address) for address in preprocess.split(",")])
+    # let user assign I2C addresses
+    cls.begin_address_assignment(display, addresses, config)
+    # creation complete
+    config_ext = f".{Config.extension}"
+    display.lock.acquire()
+    display_direct.fill(0)
+    display_direct.text("Config", 4, 4)
+    display_direct.fill_rect(4, 14, 120, 24, 1)
+    display_direct.text(user_string, 4, 16, 0)
+    display_direct.text(config_ext, 120 - len(config_ext) * OLED.CHAR_WIDTH, 28, 0)
+    display_direct.text("created", 36, 40)
+    display_direct.show()
+    Menu.B_menu.change_x_offset(47)
+    Menu.B_menu.change_y_offset(51)
+    display.lock.release()
+    cls.display_menu_and_get_choice(Menu.B_menu, display)
+    display.clear_screen()
+
+  @classmethod
+  def begin_address_assignment(cls, display: OLED, addresses: set, config: Config):
+    gc.collect()
+    display_direct = display.get_direct_control()
     # IMU position selection menu
     imu_select_menu = Menu()
     for i, position in enumerate(Config.IMU_AVAIL_POSITIONS):
       x_center, y_offset = 32 + 64 * (i % 2), 12 + 10 * (i // 2)
       imu_select_menu.add_choice(
           x_center - len(position) * OLED.CHAR_WIDTH // 2, y_offset, [position])
-
+    # prompt user for assigning positions to IMUs  
     address = addresses.pop()
     while True:
       position = cls.display_imus_and_get_choice(display, address, imu_select_menu)
@@ -464,21 +486,6 @@ class Board:
         address = addresses.pop()
     # write config to file
     config.write_config_to_file()
-    # creation complete
-    config_ext = f".{Config.extension}"
-    display.lock.acquire()
-    display_direct.fill(0)
-    display_direct.text("Config", 4, 4)
-    display_direct.fill_rect(4, 14, 120, 24, 1)
-    display_direct.text(user_string, 4, 16, 0)
-    display_direct.text(config_ext, 120 - len(config_ext) * OLED.CHAR_WIDTH, 28, 0)
-    display_direct.text("created", 36, 40)
-    display_direct.show()
-    Menu.B_menu.change_x_offset(47)
-    Menu.B_menu.change_y_offset(51)
-    display.lock.release()
-    cls.display_menu_and_get_choice(Menu.B_menu, display)
-    display.clear_screen()
 
   @classmethod
   def display_imus_and_get_choice(cls, display: OLED, address: int, imu_menu: Menu) -> str:

@@ -48,7 +48,7 @@ class Menu:
     cls.configs_menu = Menu()
     cls.configs_menu.add_choice(20, 9, ["Load Config"])
     cls.configs_menu.add_choice(12, 22, ["Create Config"])
-    cls.configs_menu.add_choice(20, 35, ["View Config"])
+    cls.configs_menu.add_choice(12, 35, ["Manage Config"])
     cls.configs_menu.add_choice(48, 48, ["Back"])
 
     cls.volume_menu = Menu()
