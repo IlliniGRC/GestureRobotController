@@ -88,8 +88,8 @@ class Menu:
           `texts`: displayed texts of the choice, must be a list containing items as lines
           `align`: alignment methods for multi-line choice
           `border_width`: width of highlight boarder when the choice is highlighted """
-      utils.ASSERT_TRUE(x >= border_width and x < OLED.WIDTH - border_width, "Menu invalid start x")
-      utils.ASSERT_TRUE(y >= border_width and y < OLED.HEIGHT - border_width, "Menu invalid start y")
+      utils.ASSERT_TRUE(x >= border_width and x < OLED.WIDTH - border_width, f"Menu invalid start x <{x}>")
+      utils.ASSERT_TRUE(y >= border_width and y < OLED.HEIGHT - border_width, f"Menu invalid start y <{y}>")
       utils.ASSERT_TRUE(type(texts) == list, "Menu tests must be list")
       utils.ASSERT_TRUE(align >= self.ALIGN_LEFT and align <= self.ALIGN_RIGHT, "Menu invalid alignment")
       self.x = x

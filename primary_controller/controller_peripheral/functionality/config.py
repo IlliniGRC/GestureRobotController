@@ -1,4 +1,4 @@
-import os, ujson
+import os, json
 import driver.utils as utils
 
 class Config:
@@ -33,25 +33,26 @@ class Config:
   #   }
   # }
 
-  # all available positions for IMU installation, should not exceed 12
+  # all available positions for IMU installation, should not exceed 10
   IMU_AVAIL_POSITIONS = [
+      JATTR_IMU_HAND,
       JATTR_IMU_THUMB, 
       JATTR_IMU_INDEX, 
       JATTR_IMU_MIDDLE, 
       JATTR_IMU_RING, 
       JATTR_IMU_LITTLE, 
-      JATTR_IMU_HAND]
+      JATTR_IMU_ARM]
   
   @classmethod
   def auxiliary_init(cls):
-    cls.empty_file_string = ujson.dumps(cls.get_empty_config())
+    cls.empty_file_string = json.dumps(cls.get_empty_config())
     try:
       with open(f"{cls.config_path}/{cls.default_config_filename}"):
         pass
     except Exception:
       utils.ASSERT_TRUE(False, "Config default config not found")
 
-    utils.ASSERT_TRUE(len(Config.IMU_AVAIL_POSITIONS) <= 12, 
+    utils.ASSERT_TRUE(len(Config.IMU_AVAIL_POSITIONS) <= 10, 
         "Config IMU available positions length should not exceed 12")
     for name in Config.IMU_AVAIL_POSITIONS:
       utils.ASSERT_TRUE(type(name) == str and len(name) <= 7, 
@@ -112,7 +113,7 @@ class Config:
     contents: dict = None
     try:
       with open(f"{Config.config_path}/{self.__associative_file_name}") as f:
-        contents = ujson.loads(f.read())
+        contents = json.loads(f.read())
     except Exception:
       utils.EXPECT_TRUE(False, "Config invalid file style, cannot be parsed as json file")
       return False
@@ -131,7 +132,7 @@ class Config:
     empty_config = Config.get_empty_config()
     empty_config[Config.JATTR_IMU_BY_POSITION] = self.__imu_dict
     with open(f"{Config.config_path}/{self.__associative_file_name}", "w") as f:
-      f.write(ujson.dumps(empty_config))
+      f.write(json.dumps(empty_config))
 
   def create_and_associate_config_file(self, filename: str) -> bool:
     utils.ASSERT_TRUE(filename.endswith(f".{Config.extension}"), f"Config <{filename}> invalid extension")
@@ -142,12 +143,12 @@ class Config:
     self.__associative_file_name = filename
     return True
 
-  def add_imu_to_config(self, imu_pos: str, i2c_addr: int, override: bool=False) -> bool:
-    utils.ASSERT_TRUE(imu_pos not in Config.IMU_AVAIL_POSITIONS, f"Config invalid imu position name <{imu_pos}>")
+  def add_imu_to_config(self, imu_pos: str, i2c_addr: int, override: bool=False) -> int:
+    utils.ASSERT_TRUE(imu_pos in Config.IMU_AVAIL_POSITIONS, f"Config invalid imu position name <{imu_pos}>")
     if not override and imu_pos in self.__imu_dict:
-      return False
+      return self.__imu_dict[imu_pos]
     self.__imu_dict[imu_pos] = i2c_addr
-    return True
+    return None
 
   def print_config(self) -> None:
     print(self.__imu_dict)

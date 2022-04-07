@@ -238,6 +238,7 @@ class Board:
     ustring_max_len = 14
 
     gc.collect()
+    display_direct = display.get_direct_control()
 
     keyboard = Menu()
     line_start = 10
@@ -259,7 +260,7 @@ class Board:
     utils.ASSERT_TRUE(len(initial_key) == 1 and initial_key in Menu.keyboard_sequence,
         f"Keyboard input preset key <{initial_key}> not in available keyboard list")
 
-    display_direct = display.get_direct_control()
+    display.lock.acquire()
     display_direct.text(title, title_x_offset, title_y_offset, 1)
 
     user_string = initial_string
@@ -272,7 +273,9 @@ class Board:
         display_direct.fill_rect(ustring_x_offset + len(user_string) * OLED.CHAR_WIDTH, 
             ustring_y_offset, 3, OLED.CHAR_HEIGHT - 1, 1)
 
+      display.lock.release()
       char = Board.user_keyboard_input(display, keyboard)
+      display.lock.acquire()
 
       if char == '\x08': # backspace
         user_string = user_string[:-1]
@@ -287,6 +290,7 @@ class Board:
 
     display_direct.fill(0)
     display_direct.show()
+    display.lock.release()
     gc.collect()
     return user_string
 
@@ -300,8 +304,7 @@ class Board:
     gc.collect()
     display_direct = display.get_direct_control()
     display.lock.acquire()
-    display_direct.fill(0)
-    display_direct.text("Loading...", 24, 28, 1)
+    display.display_loading_screen()
     display_direct.show()
     cls.text_viewer.set_text_to_view(text, wrap_content, delimiter)
     display_direct.fill(0)
@@ -377,7 +380,11 @@ class Board:
   def create_config(cls, display: OLED) -> None:
     gc.collect()
     display_direct = display.get_direct_control()
-
+    # display loading screen
+    display.lock.acquire()
+    display.display_loading_screen()
+    display_direct.show()
+    display.lock.release()
     user_string = ""
     while True:
       user_string = Board.display_keyboard_and_get_input(display, "File Name", 2, user_string)
@@ -388,6 +395,7 @@ class Board:
         filename = f"{user_string}.{Config.extension}"
         if not config.create_and_associate_config_file(filename):
           # duplicated config file name
+          display.lock.acquire()
           config_ext = f".{Config.extension}"
           display_direct.text("Config", 4, 4)
           display_direct.fill_rect(4, 14, 120, 24, 1)
@@ -397,19 +405,90 @@ class Board:
           display_direct.show()
           Menu.B_menu.change_x_offset(47)
           Menu.B_menu.change_y_offset(51)
+          display.lock.release()
           cls.display_menu_and_get_choice(Menu.B_menu, display)
+          display.lock.acquire()
           display_direct.fill(0)
+          display.lock.release()
           # ask user to re-enter a filename with current entered sequence retained
           continue
-        cls.uart1_com.send(Com.IMU, Com.ADDRESS)
-        preprocess = cls.uart1_com.blocking_read(Com.CONFIRM).decode()
-        addresses = [int(address) for address in preprocess.split(",")]
-        for address in addresses:
-          cls.display_imus_and_get_choice(address)
+        break
+    # display loading screen
+    display.lock.acquire()
+    display.display_loading_screen()
+    display_direct.show()
+    display.lock.release()
+
+    cls.uart1_com.send(Com.IMU, Com.ADDRESS)
+    preprocess = cls.uart1_com.blocking_read(Com.CONFIRM).decode()
+    addresses = set([int(address) for address in preprocess.split(",")])
+    # IMU position selection menu
+    imu_select_menu = Menu()
+    for i, position in enumerate(Config.IMU_AVAIL_POSITIONS):
+      x_center, y_offset = 32 + 64 * (i % 2), 12 + 10 * (i // 2)
+      imu_select_menu.add_choice(
+          x_center - len(position) * OLED.CHAR_WIDTH // 2, y_offset, [position])
+
+    address = addresses.pop()
+    while True:
+      position = cls.display_imus_and_get_choice(display, address, imu_select_menu)
+      conflict = config.add_imu_to_config(position, address)
+      if conflict != None: # conflict
+        display.lock.acquire()
+        display_direct.fill(0)
+        display_direct.text("Position", 0, 4)
+        display_direct.fill_rect(71, 3, len(position) * OLED.CHAR_WIDTH + 2, 9, 1)
+        display_direct.text(position, 72, 4, 0)
+        display_direct.text("is occupied by", 0, 13)
+        display_direct.text("IMU at address", 0, 22)
+        hex_address = hex(conflict)
+        text_start = 64 - len(hex_address) * OLED.CHAR_WIDTH // 2
+        display_direct.fill_rect(text_start - 1, 30, len(hex_address) * OLED.CHAR_WIDTH + 2, 9, 1)
+        display_direct.text(hex_address, text_start, 31, 0)
+        display_direct.text("Override?", 28, 40)
+        display.lock.release()
+        Menu.YN_menu.change_y_offset(51)
+        choice_idx = cls.display_menu_and_get_choice(Menu.YN_menu, display, 1)
+        if choice_idx == 0: # yes
+          # force add current, overriding conflicted
+          config.add_imu_to_config(position, address, True)
+          addresses.add(conflict)
+          # get next unallocated address
+          address = addresses.pop()
+      else: # no conflict
+        config.add_imu_to_config(position, address)
+        if len(addresses) == 0:
+          # all addresses are allocated
+          break
+        # get next unallocated address
+        address = addresses.pop()
+    # write config to file
+    config.write_config_to_file()
+    # creation complete
+    config_ext = f".{Config.extension}"
+    display.lock.acquire()
+    display_direct.fill(0)
+    display_direct.text("Config", 4, 4)
+    display_direct.fill_rect(4, 14, 120, 24, 1)
+    display_direct.text(user_string, 4, 16, 0)
+    display_direct.text(config_ext, 120 - len(config_ext) * OLED.CHAR_WIDTH, 28, 0)
+    display_direct.text("created", 36, 40)
+    display_direct.show()
+    Menu.B_menu.change_x_offset(47)
+    Menu.B_menu.change_y_offset(51)
+    display.lock.release()
+    cls.display_menu_and_get_choice(Menu.B_menu, display)
+    display.clear_screen()
 
   @classmethod
-  def display_imus_and_get_choice(cls, address: int):
-    pass
+  def display_imus_and_get_choice(cls, display: OLED, address: int, imu_menu: Menu) -> str:
+    display_direct = display.get_direct_control()
+    display.lock.acquire()
+    display_direct.fill(0)
+    display_direct.text(f"IMU @ {hex(address)}", 0, 0)
+    display.lock.release()
+    choice_idx = cls.display_menu_and_get_choice(imu_menu, display, undisplay=False)
+    return Config.IMU_AVAIL_POSITIONS[choice_idx]
 
   @classmethod
   def change_volume(cls, display: OLED) -> None:
