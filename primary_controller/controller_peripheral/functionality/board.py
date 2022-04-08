@@ -699,6 +699,44 @@ class Board:
         Menu.volume_menu.change_highlight(0) # reset highlight
         gc.collect()
         return
+  
+  @classmethod
+  def start_operation(cls, display: OLED) -> None:
+    gc.collect()
+    display_direct = display.get_direct_control()
+
+    config_name = Config.get_default_config()
+    if config_name == Config.no_default_config:
+      # no default config, report warning
+      display.lock.acquire()
+      display_direct.text("No default", 24, 12)
+      display_direct.text("config selected", 28)
+      Menu.B_menu.change_x_offset(47)
+      Menu.B_menu.change_y_offset(43)
+      cls.display_menu_and_get_choice(display, Menu.B_menu, undisplay=False)
+      return
+    # load default config
+    config = Config()
+    config.associate_with_file(config_name)
+    utils.ASSERT_TRUE(config.read_config_from_file(), "Start Operation association failed")
+    # send to main controller
+    msg = config.get_config_string(readable=False)
+    Board.uart1_com.send(Com.IMU, Com.BULK)
+    ret = Board.uart1_com.blocking_read(Com.CONFIRM)
+    utils.ASSERT_TRUE(ret == Com.BULK,
+        f"Bulk communication failed at begining, unexpected <{ret.decode()}>")
+    Board.uart1_com.send(Com.IMU, *msg.split("\n"))
+    Board.uart1_com.send(Com.IMU, Com.TERMINATE)
+    time.sleep_ms(500)
+    ret = Board.uart1_com.blocking_read(Com.CONFIRM)
+    utils.ASSERT_TRUE(ret == Com.TERMINATE, 
+        f"Bulk communication failed at termination, unexpected <{ret.decode()}>")
+    # operation begin
+    Board.uart1_com.send(Com.IMU, Com.BEGIN)
+    ret = Board.uart1_com.blocking_read(Com.CONFIRM)
+    utils.ASSERT_TRUE(ret == Com.BEGIN, 
+        f"Operation start failed at begining, unexpected <{ret.decode()}>")
+
 
   @classmethod
   def load_menu(cls):
@@ -712,6 +750,7 @@ class Board:
         choice_idx = Board.display_menu_and_get_choice(Board.main_display, current_menu)
 
         if choice_idx == 0: # Start Operation
+          cls.start_operation(Board.main_display)
           current_menu = Menu.main_menu
         elif choice_idx == 1: # Settings
           current_menu = Menu.settings_menu

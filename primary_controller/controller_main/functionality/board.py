@@ -151,12 +151,12 @@ class Board:
           while True: # while the peripheral still sending configs
             msg = cls.uart1_com.blocking_read(Com.IMU)
             if msg == Com.TERMINATE:
-              cls.uart1_com.send(Com.TERMINATE, Com.BULK)
+              cls.uart1_com.send(Com.CONFIRM, Com.TERMINATE)
               cls.state = cls.State.IDLE
               break
             preprocess = msg.split(b',')
-            address = int(preprocess[0].decode())
-            position = preprocess[1].decode()
+            position = preprocess[0].decode()
+            address = int(preprocess[1].decode())
             if address not in addresses:
               warning_msg = f"Invalid WT901 I2C Address <{hex(address)}>"
               utils.EXPECT_TRUE(False, warning_msg)
@@ -173,7 +173,6 @@ class Board:
               cls.uart1_com.send(Com.REJECT, warning_msg)
               continue
             WT901.detected_imus[address].assign_position(position)
-            cls.uart1_com.send(Com.CONFIRM, "")
         elif msg == Com.BEGIN: # begin operation
           cls.uart1_com.send(Com.CONFIRM, Com.BEGIN)
           while True:

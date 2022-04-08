@@ -108,10 +108,12 @@ class Config:
   
   @classmethod
   def remove_config(cls, filename: str) -> bool:
-    """ Remove designated the configs from the system
+    """ Remove designated the configs from the system, reset default config if necessary
         `filename`: name of file that desired to be removed 
         `returns`: whether the file exists prior to deletion """
     configs = cls.get_all_config_names()
+    if cls.get_default_config() == filename:
+      cls.set_default_config(Config.no_default_config)
     if filename in configs:
       os.remove(f"{cls.config_path}/{filename}")
       return True
@@ -129,12 +131,15 @@ class Config:
     self.__associative_file_name = None
     self.__imu_dict = {}
 
-  def associate_with_file(self, filename: str) -> None:
+  def associate_with_file(self, filename: str) -> bool:
     """ Associate the config with an existing file using its file name with file extension included
-        `filename`: name of the config file in the system, include extension """
-    utils.EXPECT_TRUE(filename in Config.get_all_config_names(), 
-        f"Config <{filename}> does not exist")
+        `filename`: name of the config file in the system, include extension 
+        `returns`: whether the association is successful """
+    if filename not in Config.get_all_config_names():
+      utils.EXPECT_TRUE(False, f"Config <{filename}> does not exist")
+      return False
     self.__associative_file_name = filename
+    return True
 
   def read_config_from_file(self) -> bool:
     """ Read config file using the associated file name of the config, contents are stored
