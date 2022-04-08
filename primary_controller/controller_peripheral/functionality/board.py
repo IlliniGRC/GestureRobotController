@@ -291,7 +291,6 @@ class Board:
           user_string = user_string + char
 
     display_direct.fill(0)
-    display_direct.show()
     display.lock.release()
     gc.collect()
     return user_string
@@ -329,8 +328,10 @@ class Board:
         display.lock.release()
         cls.text_viewer.view_on_display(display)
       time.sleep_ms(50)
+    display.lock.acquire()
+    display_direct.fill(0)
+    display.lock.release()
     gc.collect()
-    display.clear_screen()
   
   @classmethod
   def estimate_polling_rate_and_display(cls, display: OLED) -> None:
@@ -375,7 +376,9 @@ class Board:
     display.lock.release()
     cls.display_menu_and_get_choice(display, Menu.B_menu, undisplay=False)
     # clear screen and release display lock
-    display.clear_screen()
+    display.lock.acquire()
+    display_direct.fill(0)
+    display.lock.release()
     gc.collect()
 
   @classmethod
@@ -454,7 +457,10 @@ class Board:
     Menu.B_menu.change_y_offset(51)
     display.lock.release()
     cls.display_menu_and_get_choice(display, Menu.B_menu, undisplay=False)
-    display.clear_screen()
+    display.lock.acquire()
+    display_direct.fill(0)
+    display.lock.release()
+    gc.collect()
 
   @classmethod
   def begin_address_assignment(cls, display: OLED, addresses: set, config: Config):
@@ -500,6 +506,7 @@ class Board:
         address = addresses.pop()
     # write config to file
     config.write_config_to_file()
+    gc.collect()
 
   @classmethod
   def display_imus_and_get_choice(cls, display: OLED, address: int, 
@@ -546,11 +553,6 @@ class Board:
       x_text_offset = 64 - len(config) * OLED.CHAR_WIDTH // 2
       all_config_menu.add_choice(x_text_offset, 2 + 10 * i, 
           [config], x_border_width=x_text_offset - choice_x_offset)
-    page_num_display = f"1/{len(configs) - max_configs_displayed + 1}"
-    page_num_x_offset = int(page_num_center - OLED.CHAR_WIDTH * 1.5)
-    display.lock.acquire()
-    display_direct.text(page_num_display, page_num_x_offset, 55)
-    display.lock.release()
 
     all_config_menu.change_highlight(3)
     all_config_menu.change_choice_visibility(0, False)
@@ -580,7 +582,7 @@ class Board:
           all_config_menu.change_choice_visibility(1, True)
           all_config_menu.change_highlight(1)
           all_config_menu.change_choice_visibility(0, False)
-        if choice_offset == 1: # cannot forward
+        elif choice_offset == len(configs) - max_configs_displayed: # cannot forward
           all_config_menu.change_choice_visibility(0, True)
           all_config_menu.change_highlight(0)
           all_config_menu.change_choice_visibility(1, False)
@@ -588,10 +590,10 @@ class Board:
         display.lock.acquire()
         display_direct.fill(0)
         display.lock.release()
+        gc.collect()
         return False
       else: # a config is picked
         config_idx = choice_idx - 3 + choice_offset
-        print(f"config_idx:{config_idx}")
         # file manipulation menu
         target_file = configs[config_idx]
         display.lock.acquire()
@@ -605,16 +607,51 @@ class Board:
         manipulation_menu.add_choice(20, 28, ["View Config"])
         manipulation_menu.add_choice(12, 40, ["Delete Config"])
         manipulation_menu.add_choice(48, 52, ["Back"])
-        choice_idx = cls.display_menu_and_get_choice(display, 
-            manipulation_menu, undisplay=False)
-        if choice_idx == 0:
-          print("default")
-        elif choice_idx == 1:
-          print("view")
-        elif choice_idx == 2:
-          print("delete")
-        elif choice_idx == 3:
-          continue
+        while True:
+          choice_idx = cls.display_menu_and_get_choice(display, 
+              manipulation_menu, undisplay=False)
+          if choice_idx == 0:
+            display.lock.acquire()
+            display_direct.fill_rect(0, 16, 128, 48, 0)
+            display_direct.text("Confirm Set as", 8, 22)
+            display_direct.text("Default Config?", 4, 34)
+            display.lock.release()
+            Menu.YN_menu.change_y_offset(47)
+            choice_idx = cls.display_menu_and_get_choice(display, 
+                Menu.YN_menu, 1, undisplay=False)
+            if choice_idx == 0: # yes
+              Config.set_default_config(target_file)
+              break
+            else: # no
+              display.lock.acquire()
+              display_direct.fill_rect(0, 16, 128, 48, 0)
+              display.lock.release()
+          elif choice_idx == 1:
+            temp = Config()
+            temp.associate_with_file(target_file)
+            temp.read_config_from_file()
+            display.lock.acquire()
+            display_direct.fill(0)
+            display.lock.release()
+            cls.begin_text_viewer(display, temp.get_config_string())
+          elif choice_idx == 2:
+            display.lock.acquire()
+            display_direct.fill_rect(0, 16, 128, 48, 0)
+            display_direct.text("Confirm Delete?", 4, 28)
+            display.lock.release()
+            Menu.YN_menu.change_y_offset(47)
+            choice_idx = cls.display_menu_and_get_choice(display, 
+                Menu.YN_menu, 1, undisplay=False)
+            if choice_idx == 0: # yes
+              Config.remove_config(target_file)
+              gc.collect()
+              return True
+            else: # no
+              display.lock.acquire()
+              display_direct.fill_rect(0, 16, 128, 48, 0)
+              display.lock.release()
+          elif choice_idx == 3:
+            break
 
   @classmethod
   def change_volume(cls, display: OLED) -> None:
@@ -702,8 +739,9 @@ class Board:
           current_menu = Menu.configs_menu
         elif choice_idx == 1: # Create Config
           cls.create_config(Board.main_display)
-        elif choice_idx == 2: # View Config
-          cls.manage_config(Board.main_display)
+        elif choice_idx == 2: # Manage Config
+          while cls.manage_config(Board.main_display):
+            pass
           current_menu = Menu.configs_menu
 
         elif choice_idx == 3: # Back

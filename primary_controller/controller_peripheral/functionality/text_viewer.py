@@ -74,34 +74,22 @@ class TextViewer:
   def PNE_menu_choose(self) -> bool:
     choice_idx = self.__PNE_menu.choose()
     if choice_idx == 0: # prev
-      self.__prev_page()
+      self.__current_page -= 1
     elif choice_idx == 1: # next
-      self.__next_page()
+      self.__current_page += 1
     elif choice_idx == 2: # exit
       self.__reset_PNE_menu()
       self.__current_page = 0
       return True
-    return False
-
-  def __next_page(self) -> None:
-    if self.__total_pages <= 1 or self.__current_page == self.__total_pages - 1:
-      return
-    if self.__current_page == 0:
-      self.__PNE_menu.change_choice_visibility(0, True)
-    elif self.__current_page == self.__total_pages - 2:
-      self.__PNE_menu.change_choice_visibility(1, False)
-      self.__PNE_menu.change_highlight(0)
-    self.__current_page += 1
-      
-  def __prev_page(self) -> None:
-    if self.__total_pages <= 1 or self.__current_page == 0:
-      return
-    if self.__current_page == self.__total_pages - 1:
+    if self.__current_page == 0: # cannot prev
       self.__PNE_menu.change_choice_visibility(1, True)
-    elif self.__current_page == 1:
-      self.__PNE_menu.change_choice_visibility(0, False)
       self.__PNE_menu.change_highlight(1)
-    self.__current_page -= 1
+      self.__PNE_menu.change_choice_visibility(0, False)
+    elif self.__current_page == self.__total_pages - 1: # cannot next
+      self.__PNE_menu.change_choice_visibility(0, True)
+      self.__PNE_menu.change_highlight(0)
+      self.__PNE_menu.change_choice_visibility(1, False)
+    return False
       
   def view_on_display(self, display: OLED) -> None:
     display_direct = display.get_direct_control()

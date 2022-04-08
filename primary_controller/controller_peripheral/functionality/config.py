@@ -107,6 +107,17 @@ class Config:
     return ret
   
   @classmethod
+  def remove_config(cls, filename: str) -> bool:
+    """ Remove designated the configs from the system
+        `filename`: name of file that desired to be removed 
+        `returns`: whether the file exists prior to deletion """
+    configs = cls.get_all_config_names()
+    if filename in configs:
+      os.remove(f"{cls.config_path}/{filename}")
+      return True
+    return False
+  
+  @classmethod
   def remove_all_configs(cls) -> None:
     """ Remove all the configs from the system """
     configs = cls.get_all_config_names()
