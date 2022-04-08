@@ -536,7 +536,7 @@ class Board:
       display_direct.fill(0)
       display.lock.release()
       return False
-
+    # loading take some time
     display.display_loading_screen()
     # parameters
     choice_x_offset = 4
@@ -544,6 +544,10 @@ class Board:
     max_configs_displayed = 5
     page_num_center = 42 # ((1 + 8 + 1) + (75 - 1)) / 2
 
+    # default config setup
+    default_config_idx = -1
+    default_config_filename = Config.get_default_config()
+    # initial menu setup
     all_config_menu = Menu()
     all_config_menu.add_choice(1, 55, ["<"])
     all_config_menu.add_choice(75, 55, [">"])
@@ -553,13 +557,16 @@ class Board:
       x_text_offset = 64 - len(config) * OLED.CHAR_WIDTH // 2
       all_config_menu.add_choice(x_text_offset, 2 + 10 * i, 
           [config], x_border_width=x_text_offset - choice_x_offset)
-
+      if config == default_config_filename:
+        default_config_idx = i
+    # initial menu visibility setup
     all_config_menu.change_highlight(3)
     all_config_menu.change_choice_visibility(0, False)
     if len(configs) <= max_configs_displayed:
       all_config_menu.change_choice_visibility(1, False)
     
-    while True:
+    while True: # all config menu loop
+      # display page number
       offset_page = choice_offset + 1
       page_num_display = f"{offset_page}/{len(configs) - max_configs_displayed + 1}"
       page_num_x_offset = int(page_num_center - OLED.CHAR_WIDTH * (0.5 + len(str(offset_page))))
@@ -567,17 +574,27 @@ class Board:
       display_direct.fill(0)
       display_direct.fill_rect(9, 55, 65, 8, 0)
       display_direct.text(page_num_display, page_num_x_offset, 55)
+      if default_config_idx != -1:
+        display_direct.fill_rect(0, 2 + 10 * default_config_idx, 2, 8, 1)
       display.lock.release()
 
       choice_idx = cls.display_menu_and_get_choice(display, 
           all_config_menu, undisplay=False)
       if choice_idx == 0 or choice_idx == 1:
+        # reset default config index as menu items change
+        default_config_idx = -1
         choice_offset += 1 if choice_idx == 1 else -1
         for i in range(max_configs_displayed):
           config = configs[i + choice_offset]
           x_text_offset = 64 - len(config) * OLED.CHAR_WIDTH // 2
           all_config_menu.replace_choice(i + 3, x_text_offset, 2 + 10 * i, 
               [config], x_border_width=x_text_offset - choice_x_offset)
+          if config == default_config_filename:
+            default_config_idx = i
+        # default config highlight
+        if default_config_idx != -1:
+          display_direct.fill_rect(0, 2 + 10 * default_config_idx, 2, 8, 1)
+        # forward and backward button visibility
         if choice_offset == 0: # cannot backward
           all_config_menu.change_choice_visibility(1, True)
           all_config_menu.change_highlight(1)
@@ -601,7 +618,7 @@ class Board:
         manipulation_menu.add_choice(20, 28, ["View Config"])
         manipulation_menu.add_choice(12, 40, ["Delete Config"])
         manipulation_menu.add_choice(48, 52, ["Back"])
-        while True:
+        while True: # individual config menu loop
           display.lock.acquire()
           display_direct.fill(0)
           x_text_offset = 64 - len(target_file) * OLED.CHAR_WIDTH // 2
@@ -610,7 +627,7 @@ class Board:
           display.lock.release()
           choice_idx = cls.display_menu_and_get_choice(display, 
               manipulation_menu, undisplay=False)
-          if choice_idx == 0:
+          if choice_idx == 0: # set as default
             display.lock.acquire()
             display_direct.fill_rect(0, 14, 128, 50, 0)
             display_direct.text("Confirm Set as", 8, 22)
@@ -621,10 +638,12 @@ class Board:
                 Menu.YN_menu, 1, undisplay=False)
             if choice_idx == 0: # yes
               Config.set_default_config(target_file)
+              default_config_idx = config_idx - choice_offset
+              default_config_filename = target_file
               break
             else: # no
               continue
-          elif choice_idx == 1:
+          elif choice_idx == 1: # view config
             temp = Config()
             temp.associate_with_file(target_file)
             temp.read_config_from_file()
@@ -632,7 +651,7 @@ class Board:
             display_direct.fill(0)
             display.lock.release()
             cls.begin_text_viewer(display, temp.get_config_string())
-          elif choice_idx == 2:
+          elif choice_idx == 2: # delete config
             display.lock.acquire()
             display_direct.fill_rect(0, 16, 128, 48, 0)
             display_direct.text("Confirm Delete?", 4, 28)
@@ -643,7 +662,7 @@ class Board:
             if choice_idx == 0: # yes
               Config.remove_config(target_file)
               gc.collect()
-              return True
+              return True # signal to display the outer menu again
             else: # no
               continue
           elif choice_idx == 3: # back
