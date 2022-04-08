@@ -596,23 +596,23 @@ class Board:
         config_idx = choice_idx - 3 + choice_offset
         # file manipulation menu
         target_file = configs[config_idx]
-        display.lock.acquire()
-        display_direct.fill(0)
-        x_text_offset = 64 - len(target_file) * OLED.CHAR_WIDTH // 2
-        display_direct.text(target_file, x_text_offset, 4)
-        display_direct.rect(choice_x_offset, 2, 128 - 2 * choice_x_offset, 12, 1)
-        display.lock.release()
         manipulation_menu = Menu()
         manipulation_menu.add_choice(8, 16, ["Set as Default"])
         manipulation_menu.add_choice(20, 28, ["View Config"])
         manipulation_menu.add_choice(12, 40, ["Delete Config"])
         manipulation_menu.add_choice(48, 52, ["Back"])
         while True:
+          display.lock.acquire()
+          display_direct.fill(0)
+          x_text_offset = 64 - len(target_file) * OLED.CHAR_WIDTH // 2
+          display_direct.text(target_file, x_text_offset, 4)
+          display_direct.rect(choice_x_offset, 2, 128 - 2 * choice_x_offset, 12, 1)
+          display.lock.release()
           choice_idx = cls.display_menu_and_get_choice(display, 
               manipulation_menu, undisplay=False)
           if choice_idx == 0:
             display.lock.acquire()
-            display_direct.fill_rect(0, 16, 128, 48, 0)
+            display_direct.fill_rect(0, 14, 128, 50, 0)
             display_direct.text("Confirm Set as", 8, 22)
             display_direct.text("Default Config?", 4, 34)
             display.lock.release()
@@ -623,9 +623,7 @@ class Board:
               Config.set_default_config(target_file)
               break
             else: # no
-              display.lock.acquire()
-              display_direct.fill_rect(0, 16, 128, 48, 0)
-              display.lock.release()
+              continue
           elif choice_idx == 1:
             temp = Config()
             temp.associate_with_file(target_file)
@@ -647,10 +645,8 @@ class Board:
               gc.collect()
               return True
             else: # no
-              display.lock.acquire()
-              display_direct.fill_rect(0, 16, 128, 48, 0)
-              display.lock.release()
-          elif choice_idx == 3:
+              continue
+          elif choice_idx == 3: # back
             break
 
   @classmethod
