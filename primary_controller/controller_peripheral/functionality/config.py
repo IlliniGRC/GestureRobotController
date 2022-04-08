@@ -6,7 +6,7 @@ class Config:
 
   # config files storage specifications
   config_path = "data"
-  default_config_filename = "config.settings"
+  default_config_storage = "config.settings"
   extension = "config"
   no_default_config = "None"
   empty_file_string = None
@@ -45,9 +45,10 @@ class Config:
   
   @classmethod
   def auxiliary_init(cls):
-    cls.empty_file_string = json.dumps(cls.get_empty_config())
+    """ Initializations that fulfill full requirements for system to operate """
+    cls.empty_file_string = json.dumps(cls.get_empty_config_dict())
     try:
-      with open(f"{cls.config_path}/{cls.default_config_filename}"):
+      with open(f"{cls.config_path}/{cls.default_config_storage}"):
         pass
     except Exception:
       utils.ASSERT_TRUE(False, "Config default config not found")
@@ -60,31 +61,45 @@ class Config:
 
   @classmethod
   def set_default_config(cls, filename: str) -> bool:
-    if filename not in cls.list_all_configs() and filename != cls.no_default_config:
+    """ Change the default config to another file, file name must include extension
+        `filename`: name of the new default config file, can be `config.no_default_config`
+            indicating that there is no default config file """
+    if filename not in cls.get_all_config_names() and filename != cls.no_default_config:
       utils.EXPECT_TRUE(False, f"Config nonexist file {filename}")
       return False
-    with open(f"{cls.config_path}/{cls.default_config_filename}", "w") as f:
+    with open(f"{cls.config_path}/{cls.default_config_storage}", "w") as f:
       f.write(filename)
     return True
 
   @classmethod
   def get_default_config(cls) -> str:
+    """ Get the default config file name 
+        `returns`: default config file name, `config.no_default_config` if no default config
+            or the config """
     try:
-      with open(f"{cls.config_path}/{cls.default_config_filename}", "r") as f:
+      # get default config name
+      with open(f"{cls.config_path}/{cls.default_config_storage}", "r") as f:
         default_config = f.read().strip()
     except Exception:
-      utils.ASSERT_TRUE(False, "Config default config not found")
-    if default_config not in cls.list_all_configs():
+      utils.EXPECT_TRUE(False, f"Config <{cls.default_config_storage}> not found")
+      cls.set_default_config(cls.no_default_config)
+    if default_config not in cls.get_all_config_names():
+      # default config not found, reset file
+      utils.EXPECT_TRUE(False, f"Config default config <{default_config}> not found")
       default_config = cls.no_default_config
-      cls.set_default_config(default_config)
+      cls.set_default_config(cls.no_default_config)
     return default_config
 
   @classmethod
-  def get_empty_config(cls) -> list:
+  def get_empty_config_dict(cls) -> dict:
+    """ Get a standard empty config in dictionary format 
+        `returns`: an dictionary of empty config """
     return { cls.JATTR_VERSION: cls.VERSION, cls.JATTR_IMU_BY_POSITION: {} }
 
   @classmethod
-  def list_all_configs(cls) -> list:
+  def get_all_config_names(cls) -> list:
+    """ Get all the config names, with extension at the end of each name
+        `returns`: list of all config names found in the system """
     ret = []
     for filename in os.listdir(cls.config_path):
       if filename.endswith(f".{Config.extension}"):
@@ -93,34 +108,44 @@ class Config:
   
   @classmethod
   def remove_all_configs(cls) -> None:
-    configs = cls.list_all_configs()
+    """ Remove all the configs from the system """
+    configs = cls.get_all_config_names()
     for config in configs:
       os.remove(f"{cls.config_path}/{config}")
 
   def __init__(self) -> None:
+    """ Initialize an empty config with no associate file """
     self.__associative_file_name = None
     self.__imu_dict = {}
 
   def associate_with_file(self, filename: str) -> None:
-    utils.EXPECT_TRUE(filename in Config.list_all_configs(), 
+    """ Associate the config with an existing file using its file name with file extension included
+        `filename`: name of the config file in the system, include extension """
+    utils.EXPECT_TRUE(filename in Config.get_all_config_names(), 
         f"Config <{filename}> does not exist")
     self.__associative_file_name = filename
 
   def read_config_from_file(self) -> bool:
+    """ Read config file using the associated file name of the config, contents are stored
+        in the `Config` object
+        `returns`: `False` if read failed, `True` otherwise """
     if self.__associative_file_name == None:
+      # no associative file
       utils.EXPECT_TRUE(False, "Config read no file associated with this config")
       return False
-    contents: dict = None
     try:
       with open(f"{Config.config_path}/{self.__associative_file_name}") as f:
         contents = json.loads(f.read())
     except Exception:
+      # cannot be parsed as json
       utils.EXPECT_TRUE(False, "Config invalid file style, cannot be parsed as json file")
       return False
     if Config.JATTR_VERSION not in contents:
+      # no version attribute in the file
       utils.EXPECT_TRUE(False, "Config version not found")
       return False
     if contents[Config.JATTR_VERSION] != Config.VERSION:
+      # config file version mismatch
       utils.EXPECT_TRUE(False, 
           f"Config invalid version <{contents[Config.JATTR_VERSION]}>, expect <{Config.VERSION}>")
       return False
@@ -128,15 +153,21 @@ class Config:
     return True
 
   def write_config_to_file(self) -> None:
-    utils.ASSERT_TRUE(self.__associative_file_name != None, "Config write no file associated with this config")
-    empty_config = Config.get_empty_config()
+    """ Write current config to the associated file, contents are from current `Config` object """
+    utils.ASSERT_TRUE(self.__associative_file_name != None, 
+        "Config write no file associated with this config")
+    empty_config = Config.get_empty_config_dict()
     empty_config[Config.JATTR_IMU_BY_POSITION] = self.__imu_dict
     with open(f"{Config.config_path}/{self.__associative_file_name}", "w") as f:
       f.write(json.dumps(empty_config))
 
   def create_and_associate_config_file(self, filename: str) -> bool:
-    utils.ASSERT_TRUE(filename.endswith(f".{Config.extension}"), f"Config <{filename}> invalid extension")
-    if filename in Config.list_all_configs():
+    """ Create a new config file and associate current `Config` object with it, file name must
+        include extension
+        `returns`: `False` if file already exists, abort. `True` if file created successfully """
+    utils.ASSERT_TRUE(filename.endswith(f".{Config.extension}"), 
+        f"Config <{filename}> invalid extension")
+    if filename in Config.get_all_config_names():
       return False
     with open(f"{Config.config_path}/{filename}", "w") as f:
       f.write(Config.empty_file_string)
@@ -144,11 +175,30 @@ class Config:
     return True
 
   def add_imu_to_config(self, imu_pos: str, i2c_addr: int, override: bool=False) -> int:
+    """ Add a IMU to config with desired position
+        `imu_pos`: IMU position on human body
+        `i2c_addr`: I2C address of the IMU
+        `override`: whether to override if the position is already initialized 
+        `returns`: conflict I2C address if applicable """
     utils.ASSERT_TRUE(imu_pos in Config.IMU_AVAIL_POSITIONS, f"Config invalid imu position name <{imu_pos}>")
     if not override and imu_pos in self.__imu_dict:
       return self.__imu_dict[imu_pos]
     self.__imu_dict[imu_pos] = i2c_addr
     return None
 
-  def print_config(self) -> None:
-    print(self.__imu_dict)
+  def get_config_string(self, readable: bool= True) -> str:
+    """ Get config as displayable text, for both human read and transmission 
+        `readable`: whether is human-readable text 
+        `returns`: config file as string """
+    ret = ""
+    if readable:
+      max_len = max([len(pos) for pos in Config.IMU_AVAIL_POSITIONS])
+      for position in Config.IMU_AVAIL_POSITIONS:
+        addr = hex(self.__imu_dict[position]) if position in self.__imu_dict else "Unused"
+        ret += f"{position}: " + " " * (max_len - len(position)) + addr + "\n"
+    else:
+      for position in Config.IMU_AVAIL_POSITIONS:
+        if position in self.__imu_dict:
+          addr = str(self.__imu_dict[position])
+          ret += f"{position},{addr}\n"
+    return ret[:-1]

@@ -181,7 +181,8 @@ class Board:
       reset_idx: int=-1, undisplay: bool=True) -> int:
     """ Display given menu on given display, expecting user to use on-board buttons
         to select desired option, return the choice index after user finished choosing,
-        blocking. Notice, the method will acquire display lock internally
+        blocking. Notice, the method will acquire display lock internally. Will NOT clear
+        the screen after operation is done
         `display`: the OLED for the menu to be displayed on
         `menu`: the menu to be displayed onto screen
         `reset_idx`: index of choice to be highlighted after choosing, -1 if no need to reset
@@ -222,10 +223,11 @@ class Board:
 
   @classmethod
   def display_keyboard_and_get_input(cls, display: OLED, title: str, title_x_offset: int=0,
-      initial_string: str="", initial_key: str="Q") -> str:
+      initial_string: str="", initial_key: str="Q", max_len: int=14) -> str:
     """ Display keyboard to the user on given display, expecting user to use on-board buttons 
         to input character sequences. Sequences are directly reflected onto the specified display,
-        return the character sequence after user finished inputing, blocking 
+        return the character sequence after user finished inputing, blocking. Screen will be 
+        cleared after operation is done.
         `display`: the OLED for keyboard to be displayed on
         `title`: title to be displayed when prompting user for keyboard input
         `title_x_offset`: x offset of the title to be displayed 
@@ -235,7 +237,7 @@ class Board:
     title_y_offset = 3
     ustring_x_offset = 10
     ustring_y_offset = 13
-    ustring_max_len = 14
+    ustring_max_len = min(14, max_len)
 
     gc.collect()
     display_direct = display.get_direct_control()
@@ -297,7 +299,8 @@ class Board:
   @classmethod
   def begin_text_viewer(cls, display: OLED, text: str, 
       wrap_content:bool=True, delimiter: str="\n") -> None:
-    """ Begin the operation of a text viewer using specified string
+    """ Begin the operation of a text viewer using specified string, will clear screen after
+        operation is done
         `display`: the OLED for text to be displayed on
         `wrap_content`: whether to wrap the content in case line length exceed screen width
         `delimiter`: used when determine line split point """
@@ -305,7 +308,6 @@ class Board:
     display_direct = display.get_direct_control()
     display.lock.acquire()
     display.display_loading_screen()
-    display_direct.show()
     cls.text_viewer.set_text_to_view(text, wrap_content, delimiter)
     display_direct.fill(0)
     display.lock.release()
@@ -383,14 +385,29 @@ class Board:
     # display loading screen
     display.lock.acquire()
     display.display_loading_screen()
-    display_direct.show()
     display.lock.release()
     user_string = ""
     while True:
-      user_string = Board.display_keyboard_and_get_input(display, "File Name", 2, user_string)
+      user_string = Board.display_keyboard_and_get_input(display, title="File Name", 
+          title_x_offset=2, initial_string=user_string, 
+          max_len=14 - len(Config.extension) - 1)
       if user_string == None: # Cancel
         return
       else: # Confirm
+        if len(user_string) == 0: # empty string
+          display.lock.acquire()
+          display_direct.text("Config cannot", 12, 9)
+          display_direct.text("have an empty", 12, 22)
+          display_direct.text("name", 48, 35)
+          Menu.B_menu.change_x_offset(47)
+          Menu.B_menu.change_y_offset(51)
+          display.lock.release()
+          cls.display_menu_and_get_choice(display, Menu.B_menu, undisplay=False)
+          display.lock.acquire()
+          display_direct.fill(0)
+          display.lock.release()
+          # ask user to re-enter a filename
+          continue
         config = Config()
         filename = f"{user_string}.{Config.extension}"
         if not config.create_and_associate_config_file(filename):
@@ -416,7 +433,6 @@ class Board:
     # display loading screen
     display.lock.acquire()
     display.display_loading_screen()
-    display_direct.show()
     display.lock.release()
     # get all I2C addresses from the main controller
     cls.uart1_com.send(Com.IMU, Com.ADDRESS)
@@ -459,14 +475,12 @@ class Board:
         display.lock.acquire()
         display_direct.fill(0)
         display_direct.text("Position", 0, 4)
-        display_direct.fill_rect(71, 3, len(position) * OLED.CHAR_WIDTH + 2, 9, 1)
+        display_direct.inv_text(position, 72, 4)
         display_direct.text(position, 72, 4, 0)
         display_direct.text("is occupied by", 0, 13)
         display_direct.text("IMU at address", 0, 22)
         hex_address = hex(conflict)
-        text_start = 64 - len(hex_address) * OLED.CHAR_WIDTH // 2
-        display_direct.fill_rect(text_start - 1, 30, len(hex_address) * OLED.CHAR_WIDTH + 2, 9, 1)
-        display_direct.text(hex_address, text_start, 31, 0)
+        display_direct.inv_text(hex_address, 64 - len(hex_address) * OLED.CHAR_WIDTH // 2, 31)
         display_direct.text("Override?", 28, 40)
         display.lock.release()
         Menu.YN_menu.change_y_offset(51)
@@ -488,7 +502,8 @@ class Board:
     config.write_config_to_file()
 
   @classmethod
-  def display_imus_and_get_choice(cls, display: OLED, address: int, imu_menu: Menu) -> str:
+  def display_imus_and_get_choice(cls, display: OLED, address: int, 
+      imu_menu: Menu) -> str:
     display_direct = display.get_direct_control()
     display.lock.acquire()
     display_direct.fill(0)
@@ -498,8 +513,108 @@ class Board:
     return Config.IMU_AVAIL_POSITIONS[choice_idx]
 
   @classmethod
-  def manage_config(cls, display: OLED):
-    pass
+  def manage_config(cls, display: OLED) -> bool:
+    gc.collect()
+    display_direct = display.get_direct_control()
+    configs = Config.get_all_config_names()
+    if len(configs) == 0: # no config
+      display.lock.acquire()
+      display_direct.text("No Configs", 24, 14)
+      display_direct.text("To View", 36, 28)
+      Menu.B_menu.change_x_offset(47)
+      Menu.B_menu.change_y_offset(41)
+      display.lock.release()
+      cls.display_menu_and_get_choice(display, Menu.B_menu, undisplay=False)
+      display.lock.acquire()
+      display_direct.fill(0)
+      display.lock.release()
+      return False
+
+    display.display_loading_screen()
+    # parameters
+    choice_x_offset = 4
+    choice_offset = 0
+    max_configs_displayed = 5
+    page_num_center = 42 # ((1 + 8 + 1) + (75 - 1)) / 2
+
+    all_config_menu = Menu()
+    all_config_menu.add_choice(1, 55, ["<"])
+    all_config_menu.add_choice(75, 55, [">"])
+    all_config_menu.add_choice(95, 55, ["Back"])
+    for i in range(min(max_configs_displayed, len(configs))):
+      config = configs[i]
+      x_text_offset = 64 - len(config) * OLED.CHAR_WIDTH // 2
+      all_config_menu.add_choice(x_text_offset, 2 + 10 * i, 
+          [config], x_border_width=x_text_offset - choice_x_offset)
+    page_num_display = f"1/{len(configs) - max_configs_displayed + 1}"
+    page_num_x_offset = int(page_num_center - OLED.CHAR_WIDTH * 1.5)
+    display.lock.acquire()
+    display_direct.text(page_num_display, page_num_x_offset, 55)
+    display.lock.release()
+
+    all_config_menu.change_highlight(3)
+    all_config_menu.change_choice_visibility(0, False)
+    if len(configs) <= max_configs_displayed:
+      all_config_menu.change_choice_visibility(1, False)
+    
+    while True:
+      offset_page = choice_offset + 1
+      page_num_display = f"{offset_page}/{len(configs) - max_configs_displayed + 1}"
+      page_num_x_offset = int(page_num_center - OLED.CHAR_WIDTH * (0.5 + len(str(offset_page))))
+      display.lock.acquire()
+      display_direct.fill(0)
+      display_direct.fill_rect(9, 55, 65, 8, 0)
+      display_direct.text(page_num_display, page_num_x_offset, 55)
+      display.lock.release()
+
+      choice_idx = cls.display_menu_and_get_choice(display, 
+          all_config_menu, undisplay=False)
+      if choice_idx == 0 or choice_idx == 1:
+        choice_offset += 1 if choice_idx == 1 else -1
+        for i in range(max_configs_displayed):
+          config = configs[i + choice_offset]
+          x_text_offset = 64 - len(config) * OLED.CHAR_WIDTH // 2
+          all_config_menu.replace_choice(i + 3, x_text_offset, 2 + 10 * i, 
+              [config], x_border_width=x_text_offset - choice_x_offset)
+        if choice_offset == 0: # cannot backward
+          all_config_menu.change_choice_visibility(1, True)
+          all_config_menu.change_highlight(1)
+          all_config_menu.change_choice_visibility(0, False)
+        if choice_offset == 1: # cannot forward
+          all_config_menu.change_choice_visibility(0, True)
+          all_config_menu.change_highlight(0)
+          all_config_menu.change_choice_visibility(1, False)
+      elif choice_idx == 2: # back
+        display.lock.acquire()
+        display_direct.fill(0)
+        display.lock.release()
+        return False
+      else: # a config is picked
+        config_idx = choice_idx - 3 + choice_offset
+        print(f"config_idx:{config_idx}")
+        # file manipulation menu
+        target_file = configs[config_idx]
+        display.lock.acquire()
+        display_direct.fill(0)
+        x_text_offset = 64 - len(target_file) * OLED.CHAR_WIDTH // 2
+        display_direct.text(target_file, x_text_offset, 4)
+        display_direct.rect(choice_x_offset, 2, 128 - 2 * choice_x_offset, 12, 1)
+        display.lock.release()
+        manipulation_menu = Menu()
+        manipulation_menu.add_choice(8, 16, ["Set as Default"])
+        manipulation_menu.add_choice(20, 28, ["View Config"])
+        manipulation_menu.add_choice(12, 40, ["Delete Config"])
+        manipulation_menu.add_choice(48, 52, ["Back"])
+        choice_idx = cls.display_menu_and_get_choice(display, 
+            manipulation_menu, undisplay=False)
+        if choice_idx == 0:
+          print("default")
+        elif choice_idx == 1:
+          print("view")
+        elif choice_idx == 2:
+          print("delete")
+        elif choice_idx == 3:
+          continue
 
   @classmethod
   def change_volume(cls, display: OLED) -> None:
@@ -536,9 +651,6 @@ class Board:
   @classmethod
   def load_menu(cls):
     """ Main menu loop, blocks forever """
-    # get direct control of the main display
-    display_direct = Board.main_display.get_direct_control()
-
     # set current display to main menu
     current_menu = Menu.main_menu
 
@@ -591,10 +703,8 @@ class Board:
         elif choice_idx == 1: # Create Config
           cls.create_config(Board.main_display)
         elif choice_idx == 2: # View Config
-          with open("driver/status_led.py", "r") as f:
-            # normal file contains "\r\n" as new line character
-            Board.begin_text_viewer(Board.main_display, f.read(), True, "\r\n") 
-            current_menu = Menu.configs_menu
+          cls.manage_config(Board.main_display)
+          current_menu = Menu.configs_menu
 
         elif choice_idx == 3: # Back
           current_menu.change_highlight(0) # reset highlight

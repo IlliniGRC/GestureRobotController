@@ -81,15 +81,16 @@ class Menu:
     ALIGN_MIDDLE = 0x1
     ALIGN_RIGHT  = 0x2
     
-    def __init__(self, x: int, y: int, texts: list, align: int, border_width: int) -> None:
+    def __init__(self, x: int, y: int, texts: list, align: int, 
+        x_border_width: int, y_border_width: int) -> None:
       """ Create one menu item using following properties
           `x`: horizontal offset of the choice on the screen
           `y`: vertical offset of the choice on the screen 
           `texts`: displayed texts of the choice, must be a list containing items as lines
           `align`: alignment methods for multi-line choice
           `border_width`: width of highlight boarder when the choice is highlighted """
-      utils.ASSERT_TRUE(x >= border_width and x < OLED.WIDTH - border_width, f"Menu invalid start x <{x}>")
-      utils.ASSERT_TRUE(y >= border_width and y < OLED.HEIGHT - border_width, f"Menu invalid start y <{y}>")
+      utils.ASSERT_TRUE(x >= x_border_width and x < OLED.WIDTH - x_border_width, f"Menu invalid start x <{x}>")
+      utils.ASSERT_TRUE(y >= y_border_width and y < OLED.HEIGHT - y_border_width, f"Menu invalid start y <{y}>")
       utils.ASSERT_TRUE(type(texts) == list, "Menu tests must be list")
       utils.ASSERT_TRUE(align >= self.ALIGN_LEFT and align <= self.ALIGN_RIGHT, "Menu invalid alignment")
       self.x = x
@@ -99,10 +100,10 @@ class Menu:
       self.text_height = len(texts) * OLED.CHAR_HEIGHT
       self.horizontal_offset = [0 for _ in range(len(texts))]
 
-      self.highlight_x = self.x - border_width
-      self.highlight_y = self.y - border_width
-      self.highlight_width = self.text_width + 2 * border_width
-      self.highlight_height = self.text_height + 2 * border_width
+      self.highlight_x = self.x - x_border_width
+      self.highlight_y = self.y - y_border_width
+      self.highlight_width = self.text_width + 2 * x_border_width
+      self.highlight_height = self.text_height + 2 * y_border_width
       
       for i in range(len(texts)):
         text = self.texts[i]
@@ -130,18 +131,20 @@ class Menu:
     self.__y_offset = new_y
 
   def add_choice(self, x: int, y: int, texts: list, align: int=_MenuItem.ALIGN_MIDDLE, 
-      border_width: int=1) -> None:
+      x_border_width: int=1, y_border_width: int=1) -> int:
     """ Append a new choice to the end of menu
         `x`: horizontal offset of the choice on the screen
         `y`: vertical offset of the choice on the screen 
         `texts`: displayed texts of the choice, must be a list containing items as lines
         `align`: alignment methods for multi-line choice
-        `border_width`: width of highlight boarder when the choice is highlighted """
+        `border_width`: width of highlight boarder when the choice is highlighted
+        `return`: index of newly added index """
     self.__visible_indexes.add(len(self.__choices))
-    self.__choices.append(Menu._MenuItem(x, y, texts, align, border_width))
+    self.__choices.append(Menu._MenuItem(x, y, texts, align, x_border_width, y_border_width))
+    return len(self.__choices) - 1
 
   def replace_choice(self, idx: int, x: int, y: int, texts: list, align: int=_MenuItem.ALIGN_MIDDLE, 
-      border_width: int=1) -> None:
+      x_border_width: int=1, y_border_width: int=1) -> None:
     """ Replace the choice at given index of the menu to a new choice
         `idx`: the destinated index of the menu item wished to be replaced
         `x`: horizontal offset of the choice on the screen
@@ -150,11 +153,11 @@ class Menu:
         `align`: alignment methods for multi-line choice
         `border_width`: width of highlight boarder when the choice is highlighted """
     utils.ASSERT_TRUE(idx >= 0 and idx < len(self.__choices), "Menu invalid replace index")
-    self.__choices[idx] = Menu._MenuItem(x, y, texts, align, border_width)
+    self.__choices[idx] = Menu._MenuItem(x, y, texts, align, x_border_width, y_border_width)
     gc.collect()
 
   def insert_choice(self, idx: int, x: int, y: int, texts: list, align: int=_MenuItem.ALIGN_MIDDLE, 
-      border_width: int=1) -> int:
+      x_border_width: int=1, y_border_width: int=1) -> int:
     """ Insert the choice at given index of the menu to a new choice
         `idx`: the destinated index of the menu item wished to be inserted
         `x`: horizontal offset of the choice on the screen
@@ -163,7 +166,7 @@ class Menu:
         `align`: alignment methods for multi-line choice
         `border_width`: width of highlight boarder when the choice is highlighted """
     utils.ASSERT_TRUE(idx >= 0 and idx <= len(self.__choices), "Menu invalid insert index")
-    new_item = Menu._MenuItem(x, y, texts, align, border_width)
+    new_item = Menu._MenuItem(x, y, texts, align, x_border_width, y_border_width)
     self.__choices.insert(idx, new_item)
     real_idx = self.__choices.index(new_item)
     self.__visible_indexes = set([i if i < real_idx else i + 1 for i in self.__visible_indexes])

@@ -91,6 +91,10 @@ class SSD1306(framebuf.FrameBuffer):
     self.write_cmd(SET_COM_OUT_DIR | ((rotate & 1) << 3))
     self.write_cmd(SET_SEG_REMAP | (rotate & 1))
 
+  def inv_text(self, text: str, x: int, y: int) -> None:
+    self.fill_rect(x - 1, y - 1, len(text) * 8 + 2, 9, 1)
+    self.text(text, x, y, 0)
+
   def show(self):
     x0 = 0
     x1 = self.width - 1

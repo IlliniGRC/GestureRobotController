@@ -159,6 +159,7 @@ class OLED:
     """ Display the loading screen without acquiring display lock """
     self.__ssd1306.fill(0)
     self.__ssd1306.text("Loading...", 24, 28, 1)
+    self.__ssd1306.show()
 
   def display_test_screen(self, ms: int = 500, timeout_s: float = -1) -> bool:
     """ Display test screen containing lots of "Hello World"s
