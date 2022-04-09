@@ -27,24 +27,8 @@ class Board:
   # i2c
   i2c = None
 
-  # bluetooth
+  # bluetooth socket
   ble = None
-  ble_quaternions = {
-      "Q0": 0,
-      "Q1": 0,
-      "Q2": 0,
-      "Q3": 0
-  }
-  ble_accelerometer = {
-      "X": 0,
-      "Y": 0,
-      "Z": 0
-  }
-  ble_raw_frame = {
-      "I": "",
-      "Q": ble_quaternions,
-      "A": ble_accelerometer
-  }
 
   class State:
     IDLE = 0
@@ -156,7 +140,7 @@ class Board:
     for imu in cls.imus:
       index = imu.get_quatacc_report(cls.polling_buffer, index)
     cls.polling_buffer[index:index + 2] = b"\r\n" # termination sequence
-    cls.ble.send(str(cls.polling_buffer[0:index + 2]))
+    cls.ble.send(cls.polling_buffer[0:index + 2])
 
   @classmethod
   def event_loop(cls):
