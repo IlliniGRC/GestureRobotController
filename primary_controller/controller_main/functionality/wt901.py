@@ -132,6 +132,14 @@ class WT901:
     ret = self.__i2c.readfrom_mem(self.__i2c_addr, WT901.Roll, 6)
     return ret[1] << 8 | ret[0], ret[3] << 8 | ret[2], ret[5] << 8 | ret[4]
 
+  def get_accelerometer_raw(self):
+    ret = self.__i2c.readfrom_mem(self.__i2c_addr, WT901.AX, 6)
+    return ret[1] << 8 | ret[0], ret[3] << 8 | ret[2], ret[5] << 8 | ret[4]
+
+  def get_quaternion_raw(self):
+    ret = self.__i2c.readfrom_mem(self.__i2c_addr, WT901.Q0, 8)
+    return ret[1] << 8 | ret[0], ret[3] << 8 | ret[2], ret[5] << 8 | ret[4], ret[7] << 8 | ret[6]
+
   def get_angle_degree(self):
     roll, pitch, yaw = self.get_angle_raw()
     return roll / 32768 * 180, pitch / 32768 * 180, yaw / 32768 * 180
@@ -143,11 +151,15 @@ class WT901:
   def get_angle_report(self, buf: bytearray, start_idx: int) -> int:
     buf[start_idx] = ord(self.__report_header)
     buf[start_idx + 1:start_idx + 7] = self.__i2c.readfrom_mem(self.__i2c_addr, WT901.Roll, 6)
-    buf[start_idx + 7] = 10 # encoding for \n
-    return start_idx + 8
+    return start_idx + 7
 
   def get_quaternion_report(self, buf: bytearray, start_idx: int) -> int:
     buf[start_idx] = ord(self.__report_header)
     buf[start_idx + 1:start_idx + 9] = self.__i2c.readfrom_mem(self.__i2c_addr, WT901.Q0, 8)
-    buf[start_idx + 9] = 10 # encoding for \n
-    return start_idx + 10
+    return start_idx + 9
+
+  def get_quatacc_report(self, buf: bytearray, start_idx: int) -> int:
+    buf[start_idx] = ord(self.__report_header)
+    buf[start_idx + 1:start_idx + 9] = self.__i2c.readfrom_mem(self.__i2c_addr, WT901.Q0, 8)
+    buf[start_idx + 9:start_idx + 15] = self.__i2c.readfrom_mem(self.__i2c_addr, WT901.AX, 6)
+    return start_idx + 15

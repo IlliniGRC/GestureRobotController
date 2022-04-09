@@ -1,7 +1,7 @@
 import machine, _thread, time, gc
 
 import driver.utils as utils
-from driver.display import Drawing, OLED
+from driver.display import OLED
 from driver.status_led import StatusLed
 from driver.threading import ThreadSafeQueue
 from driver.io import Button, Buzzer, PWMOutput, VibrationMotor
@@ -371,9 +371,9 @@ class Board:
       display_direct.fill(0)
       display_direct.text("No available IMU", 0, 24, 1)
     # display back menu
+    display.lock.release()
     Menu.B_menu.change_x_offset(47)
     Menu.B_menu.change_y_offset(51)
-    display.lock.release()
     cls.display_menu_and_get_choice(display, Menu.B_menu, undisplay=False)
     # clear screen and release display lock
     display.lock.acquire()
@@ -402,9 +402,9 @@ class Board:
           display_direct.text("Config cannot", 12, 9)
           display_direct.text("have an empty", 12, 22)
           display_direct.text("name", 48, 35)
+          display.lock.release()
           Menu.B_menu.change_x_offset(47)
           Menu.B_menu.change_y_offset(51)
-          display.lock.release()
           cls.display_menu_and_get_choice(display, Menu.B_menu, undisplay=False)
           display.lock.acquire()
           display_direct.fill(0)
@@ -453,9 +453,9 @@ class Board:
     display_direct.text(config_ext, 120 - len(config_ext) * OLED.CHAR_WIDTH, 28, 0)
     display_direct.text("created", 36, 40)
     display_direct.show()
+    display.lock.release()
     Menu.B_menu.change_x_offset(47)
     Menu.B_menu.change_y_offset(51)
-    display.lock.release()
     cls.display_menu_and_get_choice(display, Menu.B_menu, undisplay=False)
     display.lock.acquire()
     display_direct.fill(0)
@@ -528,9 +528,9 @@ class Board:
       display.lock.acquire()
       display_direct.text("No Configs", 24, 14)
       display_direct.text("To View", 36, 28)
+      display.lock.release()
       Menu.B_menu.change_x_offset(47)
       Menu.B_menu.change_y_offset(41)
-      display.lock.release()
       cls.display_menu_and_get_choice(display, Menu.B_menu, undisplay=False)
       display.lock.acquire()
       display_direct.fill(0)
@@ -710,11 +710,18 @@ class Board:
       # no default config, report warning
       display.lock.acquire()
       display_direct.text("No default", 24, 12)
-      display_direct.text("config selected", 28)
+      display_direct.text("config selected", 4, 28)
+      display.lock.release()
       Menu.B_menu.change_x_offset(47)
       Menu.B_menu.change_y_offset(43)
       cls.display_menu_and_get_choice(display, Menu.B_menu, undisplay=False)
+      display.lock.acquire()
+      display_direct.fill(0)
+      display.lock.release()
       return
+    display.lock.acquire()
+    display.display_loading_screen()
+    display.lock.release()
     # load default config
     config = Config()
     config.associate_with_file(config_name)
@@ -735,7 +742,24 @@ class Board:
     Board.uart1_com.send(Com.IMU, Com.BEGIN)
     ret = Board.uart1_com.blocking_read(Com.CONFIRM)
     utils.ASSERT_TRUE(ret == Com.BEGIN, 
-        f"Operation start failed at begining, unexpected <{ret.decode()}>")
+        f"Operation failed at begining, unexpected <{ret.decode()}>")
+
+    display.lock.acquire()
+    display_direct.fill(0)
+    display_direct.text("In Operation", 16, 24)
+    display.lock.release()
+    Menu.B_menu.change_x_offset(47)
+    Menu.B_menu.change_y_offset(43)
+    cls.display_menu_and_get_choice(display, Menu.B_menu, undisplay=False)
+    # operation over
+    Board.uart1_com.send(Com.IMU, Com.TERMINATE)
+    ret = Board.uart1_com.blocking_read(Com.CONFIRM)
+    utils.ASSERT_TRUE(ret == Com.TERMINATE, 
+        f"Operation failed at termination, unexpected <{ret.decode()}>")
+
+    display.lock.acquire()
+    display_direct.fill(0)
+    display.lock.release()
 
 
   @classmethod

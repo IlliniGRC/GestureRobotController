@@ -1,9 +1,10 @@
-import machine, _thread, time, array
+import machine, time, bluetooth, json
 
 import driver.utils as utils
 from driver.status_led import StatusLed
 
 from functionality.wt901 import WT901
+from functionality.bluetooth import BLESimplePeripheral as ble
 from functionality.communication import Communication as Com
 
 def uart1_rx_callback() -> None:
@@ -17,11 +18,33 @@ class Board:
   # status led
   status_led = None
 
+  # uart2
+  uart2 = machine.UART(2, 115200, tx=12, rx=14)
+
   # uart1
   uart1_com: Com = None
 
   # i2c
   i2c = None
+
+  # bluetooth
+  ble = None
+  ble_quaternions = {
+      "Q0": 0,
+      "Q1": 0,
+      "Q2": 0,
+      "Q3": 0
+  }
+  ble_accelerometer = {
+      "X": 0,
+      "Y": 0,
+      "Z": 0
+  }
+  ble_raw_frame = {
+      "I": "",
+      "Q": ble_quaternions,
+      "A": ble_accelerometer
+  }
 
   class State:
     IDLE = 0
@@ -47,6 +70,8 @@ class Board:
     cls.uart1_com = Com()
 
     cls.i2c = machine.SoftI2C(sda = machine.Pin(4), scl = machine.Pin(5))
+
+    cls.ble = ble(bluetooth.BLE())
 
   @classmethod
   def begin_operation(cls) -> None:
@@ -94,7 +119,7 @@ class Board:
 
   @classmethod
   def estimate_polling_rate(cls, imus: list, count: int, quaternion: bool=False) -> float:
-    buffer = bytearray(200)
+    buffer = bytearray(400)
     iter_count = count // len(imus)
     if quaternion:
       start = time.time_ns()
@@ -111,6 +136,27 @@ class Board:
           index = imu.get_angle_report(buffer, index)
       end = time.time_ns()
     return iter_count * len(imus) * 10e8 / (end - start)
+
+  @classmethod
+  def send_imu_info_through_uart2(cls, timer: machine.Timer):
+    imu: WT901
+    index = 0
+    for imu in cls.imus:
+      index = imu.get_quatacc_report(cls.polling_buffer, index)
+    cls.polling_buffer[index:index + 2] = b"\r\n" # termination sequence
+    cls.uart2.write(cls.polling_buffer[0:index + 2])
+
+  @classmethod
+  def send_imu_info_through_bluetooth(cls, timer: machine.Timer):
+    if not cls.ble.is_connected():
+      print("N", end="")
+      return
+    imu: WT901
+    index = 0
+    for imu in cls.imus:
+      index = imu.get_quatacc_report(cls.polling_buffer, index)
+    cls.polling_buffer[index:index + 2] = b"\r\n" # termination sequence
+    cls.ble.send(str(cls.polling_buffer[0:index + 2]))
 
   @classmethod
   def event_loop(cls):
@@ -154,7 +200,7 @@ class Board:
               cls.uart1_com.send(Com.CONFIRM, Com.TERMINATE)
               cls.state = cls.State.IDLE
               break
-            preprocess = msg.split(b',')
+            preprocess = msg.split(b",")
             position = preprocess[0].decode()
             address = int(preprocess[1].decode())
             if address not in addresses:
@@ -175,7 +221,16 @@ class Board:
             WT901.detected_imus[address].assign_position(position)
         elif msg == Com.BEGIN: # begin operation
           cls.uart1_com.send(Com.CONFIRM, Com.BEGIN)
+          cls.polling_buffer = bytearray(200)
+          cls.imus = list(WT901.inited_positions.values())
+          timer = machine.Timer(1)
+          timer.init(mode=machine.Timer.PERIODIC, period=50, callback=cls.send_imu_info_through_bluetooth)
           while True:
-            time.sleep_ms(100)
+            msg = cls.uart1_com.blocking_read(Com.IMU)
+            if msg == Com.TERMINATE:
+              timer.deinit()
+              cls.uart1_com.send(Com.CONFIRM, Com.TERMINATE)
+              cls.state = cls.State.IDLE
+              break
             
       time.sleep_ms(100)
