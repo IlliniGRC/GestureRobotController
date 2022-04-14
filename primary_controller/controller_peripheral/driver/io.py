@@ -146,12 +146,12 @@ class PWMOutput:
 class VibrationMotor(PWMOutput):
   """ Class extends from PWMOutput that used to control vibration motor """
   SEQ_END = 0
-  slight_seq = array.array('i', [410, 4,  SEQ_END, 1])
-  medium_seq = array.array('i', [410, 2, 615, 4, 410, 2,  SEQ_END, 1])
-  heavy_seq  = array.array('i', [410, 2, 615, 2, 819, 8, 615, 2, 410, 2, SEQ_END, 1])
+  slight_seq = array.array('i', [1023, 4,  SEQ_END, 1])
+  medium_seq = array.array('i', [1023, 8,  SEQ_END, 1])
+  heavy_seq  = array.array('i', [1023, 16, SEQ_END, 1])
 
   def __init__(self, id: int, buf_size: int = 50) -> None:
-    super().__init__(id, PWMOutput.DUTY_MODE, buf_size, freq=500, duty=0)
+    super().__init__(id, PWMOutput.DUTY_MODE, buf_size, freq=2000, duty=0)
     self.__pwm.duty(0)
 
   def slight_vibration(self) -> bool:

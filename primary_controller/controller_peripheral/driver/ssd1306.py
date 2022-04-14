@@ -33,6 +33,7 @@ class SSD1306(framebuf.FrameBuffer):
     self.pages = self.height // 8
     self.buffer = bytearray(self.pages * self.width)
     super().__init__(self.buffer, self.width, self.height, framebuf.MONO_VLSB)
+    self.__saved_buffer = bytearray(self.pages * self.width)
     self.init_display()
 
   def init_display(self):
@@ -94,6 +95,12 @@ class SSD1306(framebuf.FrameBuffer):
   def inv_text(self, text: str, x: int, y: int) -> None:
     self.fill_rect(x - 1, y - 1, len(text) * 8 + 2, 9, 1)
     self.text(text, x, y, 0)
+
+  def save_buffer(self) -> None:
+    self.__saved_buffer[:] = self.buffer
+
+  def redisplay_buffer(self) -> None:
+    self.buffer[:] = self.__saved_buffer
 
   def show(self):
     x0 = 0

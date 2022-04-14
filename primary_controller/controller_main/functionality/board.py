@@ -29,6 +29,7 @@ class Board:
 
   # bluetooth socket
   ble = None
+  polling_buffer = bytearray(200)
 
   class State:
     IDLE = 0
@@ -55,7 +56,7 @@ class Board:
 
     cls.i2c = machine.SoftI2C(sda = machine.Pin(4), scl = machine.Pin(5))
 
-    cls.ble = ble(bluetooth.BLE())
+    cls.ble = ble(bluetooth.BLE(), "BLEE")
 
   @classmethod
   def begin_operation(cls) -> None:
@@ -202,10 +203,10 @@ class Board:
               utils.EXPECT_TRUE(False, warning_msg)
               cls.uart1_com.send(Com.REJECT, warning_msg)
               continue
+            cls.uart1_com.send(Com.CONFIRM, "")
             WT901.detected_imus[address].assign_position(position)
         elif msg == Com.BEGIN: # begin operation
           cls.uart1_com.send(Com.CONFIRM, Com.BEGIN)
-          cls.polling_buffer = bytearray(200)
           cls.imus = list(WT901.inited_positions.values())
           timer = machine.Timer(1)
           timer.init(mode=machine.Timer.PERIODIC, period=50, callback=cls.send_imu_info_through_bluetooth)

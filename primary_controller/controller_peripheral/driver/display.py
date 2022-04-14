@@ -149,6 +149,12 @@ class OLED:
         `returns`: the SSD1306"""
     return self.__ssd1306
 
+  def save_current_screen(self) -> None:
+    self.__ssd1306.save_buffer()
+
+  def redisplay_saved_screen(self) -> None:
+    self.__ssd1306.redisplay_buffer()
+
   def display_loading_screen(self) -> None:
     """ Display the loading screen without acquiring display lock """
     self.__ssd1306.fill(0)

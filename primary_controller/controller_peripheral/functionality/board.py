@@ -63,8 +63,15 @@ class Board:
     # Status led initialization must be the first
     cls.status_led = StatusLed()
     
-    cls.main_display = OLED(0x3C)
-    cls.secondary_display = OLED(0x3D)
+    try:
+      cls.main_display = OLED(0x3C)
+    except Exception:
+      utils.ASSERT_TRUE(False, "Main display does not exist")
+
+    try:
+      cls.secondary_display = OLED(0x3D)
+    except Exception:
+      utils.EXPECT_TRUE(False, "Secondary display does not exist")
 
 
   @classmethod
@@ -134,6 +141,10 @@ class Board:
     cls.button_pending = False
     cls.button_pending_lock.release()
     return messages
+
+  @classmethod
+  def second_display_priority(cls) -> OLED:
+    return cls.secondary_display if cls.secondary_display != None else cls.main_display
 
   @classmethod
   def begin_snake_game(cls, display: OLED, init_x: int=29, init_y: int=29, 
@@ -463,6 +474,22 @@ class Board:
     gc.collect()
 
   @classmethod
+  def display_error_log(cls, display: OLED, error_log: str):
+    gc.collect()
+    display.lock.acquire()
+    display.save_current_screen()
+    display.lock.release()
+
+    prepend = "A recoverable\nerror has\noccurred during\noperation:\n"
+    cls.begin_text_viewer(display, prepend + error_log)
+
+    display.lock.acquire()
+    display.redisplay_saved_screen()
+    display.get_direct_control().show()
+    display.lock.release()
+    gc.collect()
+
+  @classmethod
   def begin_address_assignment(cls, display: OLED, addresses: set, config: Config):
     gc.collect()
     display_direct = display.get_direct_control()
@@ -568,7 +595,7 @@ class Board:
     while True: # all config menu loop
       # display page number
       offset_page = choice_offset + 1
-      page_num_display = f"{offset_page}/{len(configs) - max_configs_displayed + 1}"
+      page_num_display = f"{offset_page}/{max(1, len(configs) - max_configs_displayed + 1)}"
       page_num_x_offset = int(page_num_center - OLED.CHAR_WIDTH * (0.5 + len(str(offset_page))))
       display.lock.acquire()
       display_direct.fill(0)
@@ -727,17 +754,28 @@ class Board:
     config.associate_with_file(config_name)
     utils.ASSERT_TRUE(config.read_config_from_file(), "Start Operation association failed")
     # send to main controller
-    msg = config.get_config_string(readable=False)
+    messages = config.get_config_string(readable=False).split("\n")
     Board.uart1_com.send(Com.IMU, Com.BULK)
     ret = Board.uart1_com.blocking_read(Com.CONFIRM)
     utils.ASSERT_TRUE(ret == Com.BULK,
         f"Bulk communication failed at begining, unexpected <{ret.decode()}>")
-    Board.uart1_com.send(Com.IMU, *msg.split("\n"))
+    success = True
+    for message in messages:
+      Board.uart1_com.send(Com.IMU, message)
+      ret, ret_message = Board.uart1_com.wait_for_reject_or_confirm()
+      if not ret: # IMU not detected by main controller
+        cls.display_error_log(cls.second_display_priority(), ret_message)
+        display.lock.acquire()
+        display_direct.fill(0)
+        display.lock.release()
+        success = False
+        break
     Board.uart1_com.send(Com.IMU, Com.TERMINATE)
-    time.sleep_ms(500)
     ret = Board.uart1_com.blocking_read(Com.CONFIRM)
     utils.ASSERT_TRUE(ret == Com.TERMINATE, 
         f"Bulk communication failed at termination, unexpected <{ret.decode()}>")
+    if not success:
+      return
     # operation begin
     Board.uart1_com.send(Com.IMU, Com.BEGIN)
     ret = Board.uart1_com.blocking_read(Com.CONFIRM)

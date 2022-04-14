@@ -76,16 +76,14 @@ msg = ''
 
 
 class BLESimplePeripheral:
-    def __init__(self, ble, name='BLE'):
+    def __init__(self, ble, name=None):
         self.led = Pin(2, Pin.OUT)
-        self.timer1 = Timer(3)
         self._ble = ble
         self._ble.active(True)
         self._ble.irq(self._irq)
         ((self._handle_tx, self._handle_rx),) = self._ble.gatts_register_services((_UART_SERVICE,))
         self._connections = set()
         self._write_callback = None
-        self.timer1.init(period=100, mode=Timer.PERIODIC, callback=lambda t: self.led.value(not self.led.value()))
         self._payload = advertising_payload(name=name, services=[_UART_UUID])
         self._advertise()
 
@@ -93,12 +91,11 @@ class BLESimplePeripheral:
         # Track connections so we can send notifications.
         if event == _IRQ_CENTRAL_CONNECT:
             self.led.on()
-            self.timer1.deinit()
             conn_handle, _, _ = data
             print('New connection', conn_handle)
             self._connections.add(conn_handle)
+            self.led.off()
         elif event == _IRQ_CENTRAL_DISCONNECT:
-            self.timer1.init(period=100, mode=Timer.PERIODIC, callback=lambda t: self.led.value(not self.led.value()))
             conn_handle, _, _ = data
             print('Disconnected', conn_handle)
             self._connections.remove(conn_handle)
