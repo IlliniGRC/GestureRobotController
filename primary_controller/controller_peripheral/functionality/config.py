@@ -73,9 +73,8 @@ class Config:
 
   @classmethod
   def get_default_config(cls) -> str:
-    """ Get the default config file name 
-        `returns`: default config file name, `config.no_default_config` if no default config
-            or the config """
+    """ Get the default config file name , include extension
+        `returns`: default config file name, `config.no_default_config` if no or invalid default config """
     try:
       # get default config name
       with open(f"{cls.config_path}/{cls.default_config_storage}", "r") as f:

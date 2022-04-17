@@ -209,7 +209,7 @@ class Buzzer(PWMOutput):
     G[5], 4, A[5], 4, C[6], 4, A[5], 4, G[6], 12, B[5], 12, C[6], 18, 
     G[5], 4, A[5], 4, C[6], 4, A[5], 4, C[6], 12, D[6], 12, B[5], 4, A[5], 4, G[5], 4, D[6], 8, C[6], 22])
 
-  def __init__(self, id: int, volume: int, buf_size: int = 200) -> None:
+  def __init__(self, id: int, volume: int, buf_size: int = 100) -> None:
     super().__init__(id, PWMOutput.FREQ_MODE, buf_size, freq=1, duty=0)
     self.__volume = volume
     self.set_volume(self.__volume)

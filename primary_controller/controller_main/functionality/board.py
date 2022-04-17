@@ -263,7 +263,7 @@ class Board:
         if msg == Com.ADDRESS:
           pass
         elif msg == Com.NAME:
-          cls.uart1_com.send(Com.BLUETOOTH, cls.ble.get_current_advertise_name())
+          cls.uart1_com.send(Com.CONFIRM, cls.ble.get_current_advertise_name())
         elif msg == Com.BULK:
           cls.change_bluetooth_advertise_name()
         cls.state = cls.State.IDLE

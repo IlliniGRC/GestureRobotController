@@ -32,7 +32,7 @@ class Menu:
     cls.main_menu = Menu()
     cls.main_menu.add_choice(4, 14, ["Start Operation"])
     cls.main_menu.add_choice(32, 28, ["Settings"])
-    cls.main_menu.add_choice(32, 42, ["Info"])
+    cls.main_menu.add_choice(48, 42, ["Info"])
 
     cls.settings_menu = Menu()
     cls.settings_menu.add_choice(36, 4, ["General"])

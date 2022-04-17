@@ -401,6 +401,26 @@ class Board:
     display.lock.acquire()
     display.display_loading_screen()
     display.lock.release()
+
+    # get all I2C addresses from the main controller
+    cls.uart1_com.send(Com.IMU, Com.ADDRESS)
+    preprocess = cls.uart1_com.blocking_read(Com.CONFIRM).decode()
+    if len(preprocess) == 0: # no IMUs available
+      display.lock.acquire()
+      display_direct.fill(0)
+      display_direct.text("No IMU Detected", 4, 4)
+      display_direct.text("Attach at Least", 4, 16)
+      display_direct.text("One IMU to", 18, 28)
+      display_direct.text("Create Config", 12, 40)
+      display.lock.release()
+      Menu.B_menu.change_x_offset(47)
+      Menu.B_menu.change_y_offset(51)
+      cls.display_menu_and_get_choice(display, Menu.B_menu, undisplay=False)
+      display.lock.acquire()
+      display_direct.fill(0)
+      display.lock.release()
+      return
+
     user_string = ""
     while True:
       user_string = Board.display_keyboard_and_get_input(display, title="File Name", 
@@ -435,9 +455,9 @@ class Board:
           display_direct.text(config_ext, 120 - len(config_ext) * OLED.CHAR_WIDTH, 28, 0)
           display_direct.text("already exists", 8, 40)
           display_direct.show()
+          display.lock.release()
           Menu.B_menu.change_x_offset(47)
           Menu.B_menu.change_y_offset(51)
-          display.lock.release()
           cls.display_menu_and_get_choice(display, Menu.B_menu, undisplay=False)
           display.lock.acquire()
           display_direct.fill(0)
@@ -449,9 +469,6 @@ class Board:
     display.lock.acquire()
     display.display_loading_screen()
     display.lock.release()
-    # get all I2C addresses from the main controller
-    cls.uart1_com.send(Com.IMU, Com.ADDRESS)
-    preprocess = cls.uart1_com.blocking_read(Com.CONFIRM).decode()
     addresses = set([int(address) for address in preprocess.split(",")])
     # let user assign I2C addresses
     cls.begin_address_assignment(display, addresses, config)
@@ -843,9 +860,33 @@ class Board:
 
   @classmethod
   def display_board_info(cls, display: OLED) -> None:
-    display_direct = display.get_direct_control()
-    return
+    display.lock.acquire()
+    display.display_loading_screen()
+    display.lock.release()
 
+    report = ""
+  
+    cls.uart1_com.send(Com.BLUETOOTH, Com.NAME)
+    ret = Board.uart1_com.blocking_read(Com.CONFIRM).decode()
+    report += f"Bluetooth Name:\n  {ret}\n"
+
+    current_config_name = Config.get_default_config().split(".")[0]
+    report += f"Current Config\n  {current_config_name}\n"
+
+    cls.uart1_com.send(Com.IMU, Com.ADDRESS)
+    ret = Board.uart1_com.blocking_read(Com.CONFIRM).decode()
+    if len(ret) == 0:
+      addresses = []
+    else:
+      addresses = [int(address) for address in ret.split(",")]
+    report += f"Number of IMUs\nConnected: {len(addresses)}\n"
+
+    if len(ret) != 0:
+      report += f"The IMUs are on I2C Addresses:\n"
+      for address in addresses:
+        report += f"  {hex(address)}\n"
+
+    cls.begin_text_viewer(Board.main_display, report)
 
   @classmethod
   def load_menu(cls):
@@ -865,6 +906,7 @@ class Board:
           current_menu = Menu.settings_menu
         elif choice_idx == 2: # Information
           Board.display_board_info(Board.main_display)
+          current_menu = Menu.main_menu
 
       elif current_menu == Menu.settings_menu:
         choice_idx = Board.display_menu_and_get_choice(Board.main_display, current_menu)
