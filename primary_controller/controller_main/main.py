@@ -12,14 +12,15 @@ def main():
 
   # waiting for peripheral controller to connect
   while True:
-    msg = Board.uart1_com.read_all(Com.BOOT_UP)
-    if msg != None:
+    Board.status_led.change_state(True)
+    if Board.uart1_com.read_all(Com.BOOT_UP) != None:
+      Board.status_led.change_state(False)
       break
     Board.uart1_com.send(Com.BOOT_UP, "")
-    Board.status_led.show_info()
-    time.sleep_ms(1000)
+    Board.status_led.change_state(False)
+    time.sleep_ms(300)
 
-  time.sleep_ms(200)
+  time.sleep_ms(300)
   Board.uart1_com.discard_all(Com.BOOT_UP)
   
   Board.event_loop()

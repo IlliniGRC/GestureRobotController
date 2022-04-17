@@ -15,6 +15,7 @@ class Communication:
   BOOT_UP = b'boot'
   START = b'start'
   IMU = b'imu'
+  BLUETOOTH = b'ble'
   CONFIRM = b'con'
   REJECT = b'rej'
   WARNING = b'warn'
@@ -22,9 +23,10 @@ class Communication:
   # Control destinations
   BEGIN = b'begin'
   TERMINATE = b'terminate'
+  BULK = b'bulk'
   ADDRESS = b'addr'
   SPEED = b'speed'
-  BULK = b'bulk'
+  NAME = b'name'
 
   def __init__(self) -> None:
     self.__uart1 = UARTCallback(1, tx=18, rx=17)

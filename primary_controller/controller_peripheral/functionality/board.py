@@ -274,6 +274,7 @@ class Board:
         f"Keyboard input preset key <{initial_key}> not in available keyboard list")
 
     display.lock.acquire()
+    display_direct.fill(0)
     display_direct.text(title, title_x_offset, title_y_offset, 1)
 
     user_string = initial_string
@@ -758,7 +759,7 @@ class Board:
     Board.uart1_com.send(Com.IMU, Com.BULK)
     ret = Board.uart1_com.blocking_read(Com.CONFIRM)
     utils.ASSERT_TRUE(ret == Com.BULK,
-        f"Bulk communication failed at begining, unexpected <{ret.decode()}>")
+        f"Operation bulk communication failed at begining, unexpected <{ret.decode()}>")
     success = True
     for message in messages:
       Board.uart1_com.send(Com.IMU, message)
@@ -773,7 +774,7 @@ class Board:
     Board.uart1_com.send(Com.IMU, Com.TERMINATE)
     ret = Board.uart1_com.blocking_read(Com.CONFIRM)
     utils.ASSERT_TRUE(ret == Com.TERMINATE, 
-        f"Bulk communication failed at termination, unexpected <{ret.decode()}>")
+        f"Operation bulk communication failed at termination, unexpected <{ret.decode()}>")
     if not success:
       return
     # operation begin
@@ -798,6 +799,52 @@ class Board:
     display.lock.acquire()
     display_direct.fill(0)
     display.lock.release()
+  
+  @classmethod
+  def change_bluetooth_advertise_name(cls, display: OLED) -> None:
+    display_direct = display.get_direct_control()
+
+    display.lock.acquire()
+    display.display_loading_screen()
+    display.lock.release()
+
+    cls.uart1_com.send(Com.BLUETOOTH, Com.BULK)
+    ret = Board.uart1_com.blocking_read(Com.CONFIRM)
+    utils.ASSERT_TRUE(ret == Com.BULK,
+        f"Bluetooth bulk communication failed at begining, unexpected <{ret.decode()}>")
+
+    while True:
+      name = cls.display_keyboard_and_get_input(display, title="Bluetooth Name", 
+          title_x_offset=2, max_len=8)
+      cls.uart1_com.send(Com.BLUETOOTH, name)
+      status, msg = cls.uart1_com.wait_for_reject_or_confirm()
+      if status:
+        break
+      cls.display_error_log(cls.second_display_priority(), msg)
+      
+    utils.ASSERT_TRUE(msg == Com.TERMINATE.decode(), 
+        f"Bluetooth bulk failed at termination, unexpected <{ret.decode()}>")
+
+    display.lock.acquire()
+    display_direct.fill(0)
+    display_direct.text("Bluetooth name", 8, 14)
+    display_direct.text("has changed to", 8, 24)
+    display_direct.fill_rect(64 - len(name) * OLED.CHAR_WIDTH // 2, 33, 
+        len(name) * OLED.CHAR_WIDTH, 9, 1)
+    display_direct.text(name, 64 - len(name) * OLED.CHAR_WIDTH // 2, 34, 0)
+    display.lock.release()
+    Menu.B_menu.change_x_offset(47)
+    Menu.B_menu.change_y_offset(43)
+    cls.display_menu_and_get_choice(display, Menu.B_menu, undisplay=False)
+
+    display.lock.acquire()
+    display_direct.fill(0)
+    display.lock.release()
+
+  @classmethod
+  def display_board_info(cls, display: OLED) -> None:
+    display_direct = display.get_direct_control()
+    return
 
 
   @classmethod
@@ -812,10 +859,12 @@ class Board:
         choice_idx = Board.display_menu_and_get_choice(Board.main_display, current_menu)
 
         if choice_idx == 0: # Start Operation
-          cls.start_operation(Board.main_display)
+          Board.start_operation(Board.main_display)
           current_menu = Menu.main_menu
         elif choice_idx == 1: # Settings
           current_menu = Menu.settings_menu
+        elif choice_idx == 2: # Information
+          Board.display_board_info(Board.main_display)
 
       elif current_menu == Menu.settings_menu:
         choice_idx = Board.display_menu_and_get_choice(Board.main_display, current_menu)
@@ -839,27 +888,27 @@ class Board:
         choice_idx = Board.display_menu_and_get_choice(Board.main_display, current_menu)
 
         if choice_idx == 0: # Change Volume
-          cls.change_volume(Board.main_display)
+          Board.change_volume(Board.main_display)
           current_menu = Menu.general_menu
-        elif choice_idx == 1: # View IMU polling rate
-          cls.estimate_polling_rate_and_display(Board.main_display)
+        elif choice_idx == 1: # Change Bluetooth name
+          Board.change_bluetooth_advertise_name(Board.main_display)
           current_menu = Menu.general_menu
-        elif choice_idx == 2: # Back
+        elif choice_idx == 2: # View IMU polling rate
+          Board.estimate_polling_rate_and_display(Board.main_display)
+          current_menu = Menu.general_menu
+        elif choice_idx == 3: # Back
           current_menu.change_highlight(0) # reset highlight
           current_menu = Menu.settings_menu
 
       elif current_menu == Menu.configs_menu:
         choice_idx = Board.display_menu_and_get_choice(Board.main_display, current_menu)
 
-        if choice_idx == 0: # Load Config
-          current_menu = Menu.configs_menu
-        elif choice_idx == 1: # Create Config
-          cls.create_config(Board.main_display)
-        elif choice_idx == 2: # Manage Config
-          while cls.manage_config(Board.main_display):
+        if choice_idx == 0: # Create Config
+          Board.create_config(Board.main_display)
+        elif choice_idx == 1: # Manage Config
+          while Board.manage_config(Board.main_display):
             pass
           current_menu = Menu.configs_menu
-
-        elif choice_idx == 3: # Back
+        elif choice_idx == 2: # Back
           current_menu.change_highlight(0) # reset highlight
           current_menu = Menu.settings_menu

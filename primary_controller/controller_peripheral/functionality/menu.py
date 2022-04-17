@@ -31,7 +31,8 @@ class Menu:
     """ Initializations that fulfill full requirements for system to operate """
     cls.main_menu = Menu()
     cls.main_menu.add_choice(4, 14, ["Start Operation"])
-    cls.main_menu.add_choice(32, 32, ["Settings"])
+    cls.main_menu.add_choice(32, 28, ["Settings"])
+    cls.main_menu.add_choice(32, 42, ["Info"])
 
     cls.settings_menu = Menu()
     cls.settings_menu.add_choice(36, 4, ["General"])
@@ -41,15 +42,15 @@ class Menu:
     cls.settings_menu.add_choice(48, 52, ["Back"])
 
     cls.general_menu = Menu()
-    cls.general_menu.add_choice(40, 10, ["Volume"])
-    cls.general_menu.add_choice(16, 24, ["Estimate IMU", "Polling Rate"])
-    cls.general_menu.add_choice(48, 46, ["Back"])
+    cls.general_menu.add_choice(40, 6, ["Volume"])
+    cls.general_menu.add_choice(8, 18, ["Bluetooth Name"])
+    cls.general_menu.add_choice(16, 30, ["Estimate IMU", "Polling Rate"])
+    cls.general_menu.add_choice(48, 50, ["Back"])
 
     cls.configs_menu = Menu()
-    cls.configs_menu.add_choice(20, 9, ["Load Config"])
-    cls.configs_menu.add_choice(12, 22, ["Create Config"])
-    cls.configs_menu.add_choice(12, 35, ["Manage Config"])
-    cls.configs_menu.add_choice(48, 48, ["Back"])
+    cls.configs_menu.add_choice(12, 14, ["Create Config"])
+    cls.configs_menu.add_choice(12, 28, ["Manage Config"])
+    cls.configs_menu.add_choice(48, 42, ["Back"])
 
     cls.volume_menu = Menu()
     cls.volume_menu.add_choice(38, 35, ["-"])

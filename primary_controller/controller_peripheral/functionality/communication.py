@@ -15,6 +15,7 @@ class Communication:
   BOOT_UP = b'boot'
   START = b'start'
   IMU = b'imu'
+  BLUETOOTH = b'ble'
   CONFIRM = b'con'
   REJECT = b'rej'
   WARNING = b'warn'
@@ -22,9 +23,10 @@ class Communication:
   # Control destinations
   BEGIN = b'begin'
   TERMINATE = b'terminate'
+  BULK = b'bulk'
   ADDRESS = b'addr'
   SPEED = b'speed'
-  BULK = b'bulk'
+  NAME = b'name'
 
   def __init__(self) -> None:
     self.__uart1 = UARTCallback(1, tx=18, rx=17)
@@ -52,9 +54,6 @@ class Communication:
       else:
         self.__message_queue[category] = [data]
     self.__message_lock.release()
-
-  def finish(self) -> None:
-    self.__uart1.finish()
   
   def pending_categories(self) -> set:
     return self.__pending_categories

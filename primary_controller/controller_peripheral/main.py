@@ -19,15 +19,16 @@ def main():
 
   # waiting for main controller to connect
   while True:
-    msg = Board.uart1_com.read_all(Com.BOOT_UP)
-    if msg != None:
+    Board.status_led.change_state(True)
+    if Board.uart1_com.read_all(Com.BOOT_UP) != None:
+      Board.status_led.change_state(False)
       Board.uart1_com.send(Com.BOOT_UP, "")
       break
-    time.sleep_ms(100)
+    time.sleep_ms(300)
 
   # wait for start screen to finish if not already
   while not utils.start_screen_exited():
-    time.sleep_ms(200)
+    time.sleep_ms(300)
 
   # discard all unread bootup signals
   Board.uart1_com.discard_all(Com.BOOT_UP)
@@ -39,15 +40,6 @@ def main():
   # begin operation
   Board.begin_operation()
   time.sleep_ms(100)
-
-  # Example useage of Board.button
-  #
-  # while True:
-  #   # BUTTON
-  #   if Board.is_button_pending():
-  #     messages = Board.get_all_button_message()
-  #     print(f"BUTTON: {messages}")
-  #   time.sleep_ms(10)
 
   # Begin menu loop
   Board.load_menu()

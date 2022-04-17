@@ -17,6 +17,9 @@ class StatusLed:
     self.__warning_thread = Thread(self.__show_warning)
     self.__lock = _thread.allocate_lock()
 
+  def change_state(self, state: bool) -> None:
+    self.__pin.value(1 if state else 0)
+
   def show_bootup(self) -> None:
     """ Show bootup sequence, blocking """
     self.__lock.acquire()
