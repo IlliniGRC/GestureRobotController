@@ -129,8 +129,8 @@ JLinkLog.txt
 *.uvguix.*
 
 # Group Rule Specific
-*.jpg
-*.png
+# *.jpg
+# *.png
 *.mp4
 *.avi
 *.mov
