@@ -4,7 +4,7 @@ from itertools import combinations
 
 
 def Qdis(Q1: Quaternion, Q2: Quaternion):
-    return Quaternion.distance(Q1, Q2)
+    return Quaternion.sym_distance(Q1, Q2)
 
 
 def l2_vector(Q_finger: dict):

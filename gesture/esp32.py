@@ -1,4 +1,7 @@
+import threading
 import numpy as np
+import subprocess
+import time
 from pyquaternion import Quaternion
 from serial import Serial
 import keyboard
@@ -194,13 +197,24 @@ def collect(port, mode):
                     break
         f.write(json.dumps(content, indent=4))
 
+retry_s = 2
+controllerPort = "/tmp/ttyBLE10"
 
-esp32port = 5
-
+def controller_ble_connect():
+    while True:
+        print("Trying to connect to controller")
+        subprocess.run(["ble-serial", "-d", "30:83:98:7A:E4:06", "-p", "/tmp/ttyBLE10", 
+            "-w", "6e400002-b5a3-f393-e0a9-e50e24dcca9e", 
+            "-r", "6e400003-b5a3-f393-e0a9-e50e24dcca9e"], stdout=subprocess.DEVNULL)
+        print(f"Controller connecting failed, try again after {retry_s} sec...")
+        time.sleep(retry_s)
 
 def main():
-    ser = Serial(f'/dev/pts/{esp32port}')
-    print('Opening ' + ser.name)
+    controller_thread = threading.Thread(target=controller_ble_connect)
+    controller_thread.start()
+
+    input()
+    ser = Serial(controllerPort)
     while True:
         print('// Mode 0 for displaying current gesture data')
         print('// Mode 1 for collecting gesture data for building dataset')
