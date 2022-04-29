@@ -2,9 +2,9 @@ import threading
 import numpy as np
 import subprocess
 import time
+from l2_squared_error import l2_squared_error_to_file
 from pyquaternion import Quaternion
 from serial import Serial
-import keyboard
 import json
 
 
@@ -105,8 +105,10 @@ def display(port):
             #     QA = Q
             to_report += f'| roll:{roll:8.3f}, pitch:{pitch:8.3f}, yaw:{yaw:8.3f}. Q0:{q0:8.3f}, Q1:{q1:8.3f}, Q2:{q2:8.3f}, Q3:{q3:8.3f}, AX:{ax:8.3f}, AY:{ay:8.3f}, AZ:{az:8.3f}\n'
         print(to_report)
-        if keyboard.is_pressed('q'):
-            break
+
+def keyboard_thread():
+    input()
+    return
 
 
 def collect(port, mode):
@@ -117,86 +119,79 @@ def collect(port, mode):
     else:
         print('Mode Error!')
         return
-    try:
-        with open(file_name, 'r') as f:
-            content = json.load(f)
-    except Exception:
-        content = dict()
+    content = {}
     with open(file_name, 'w') as f:
-        if 'frame_count' not in content:
-            content['frame_count'] = 0
-        frame_count = content['frame_count']
-        QT = list()
-        QI = list()
-        QM = list()
-        QR = list()
-        QL = list()
-        QH = list()
-        # QA = list()
-
-        flag = False
-
         while True:
             idx = input(f'Gesture idx: ')
             if idx == '' or idx[-1] == 'q':
                 break
-            idx = int(idx[-1])
-            num = 0
+            if not idx.isnumeric():
+                print(f"Invalid input <{idx}>")
+                continue
+            idx = int(idx)
+            press_thread = threading.Thread(target=keyboard_thread)
+            press_thread.start()
+            print(f"Press <Enter> to Sample Gesture Index <{idx}>")
             while True:
                 report = port.read_until(expected=b"\r\n")
-                if keyboard.is_pressed('space'):
-                    if flag:
-                        continue
-                    flag = True
-                    if len(report) % 15 != 2:
-                        continue
+                if len(report) % 15 != 2:
+                    continue
+                if not press_thread.is_alive():
+                    Q_list = {}
                     index = 0
                     while index < len(report) - 2:
-                        identifier, quaternions, accelerometers = report[index:index + 1], report[
-                                                                                           index + 1:index + 9], report[
-                                                                                                                 index + 9:index + 15]
+                        identifier, quaternions = report[index:index + 1], report[index + 1:index + 9]
                         index += 15
                         q0 = np.short(quaternions[1] << 8 | quaternions[0]) / 32768
                         q1 = np.short(quaternions[3] << 8 | quaternions[2]) / 32768
                         q2 = np.short(quaternions[5] << 8 | quaternions[4]) / 32768
                         q3 = np.short(quaternions[7] << 8 | quaternions[6]) / 32768
                         Q = list(np.array([q0, q1, q2, q3]))
-                        if identifier == b'T':  # Thumb
-                            QT = Q
-                        elif identifier == b'I':  # Index
-                            QI = Q
-                        elif identifier == b'M':  # Middle
-                            QM = Q
-                        elif identifier == b'R':  # Ring
-                            QR = Q
-                        elif identifier == b'L':  # Little
-                            QL = Q
-                        elif identifier == b'H':  # Hand
-                            QH = Q
-                        # elif identifier == b'A':  # Arm
-                        #     QA = Q
-                    Q_list = dict()
-                    Q_list['Thumb'] = QT
-                    Q_list['Index'] = QI
-                    Q_list['Middle'] = QM
-                    Q_list['Ring'] = QR
-                    Q_list['Little'] = QL
-                    Q_list['Hand'] = QH
-                    gesture = dict()
-                    gesture['tag'] = idx
-                    gesture['Quaternion'] = Q_list
-                    if 'dataset' not in content:
-                        content['dataset'] = dict()
-                    content['dataset'][frame_count] = gesture
-                    frame_count += 1
-                    content['frame_count'] = frame_count
-                    num += 1
-                    print(f'get sample {num}')
-                else:
-                    flag = False
-                if keyboard.is_pressed('q'):
+                        if identifier not in [b"T", b"I", b"M", b"R", b"L", b"H", b"A"]:
+                            print(f" Invalid Identifier <{identifier}>")
+                            continue
+                        Q_list[identifier.decode()] = Q
+                    content[idx] = Q_list
+                    print(f'Get Sample For Gesture {idx}')
                     break
-        f.write(json.dumps(content, indent=4))
+        f.write(json.dumps(content, indent=2))
+
+def to_file(port: Serial):
+    content = {}
+    with open('gesture_l2.json', 'r') as f:
+        l2_database = json.load(f)
+
+    with open("database.bin", 'w') as f:
+        port.flush()
+        while True:
+            press_thread = threading.Thread(target=keyboard_thread)
+            press_thread.start()
+            print(f"Press <Enter> to exit sampling")
+            while True:
+                report = port.read_until(expected=b"\r\n")
+                if len(report) % 15 != 2:
+                    continue
+                if not press_thread.is_alive():
+                    print("Gathering process killed")
+                    return
+                Q_list = {}
+                index = 0
+                while index < len(report) - 2:
+                    identifier, quaternions = report[index:index + 1], report[index + 1:index + 9]
+                    index += 15
+                    q0 = np.short(quaternions[1] << 8 | quaternions[0]) / 32768
+                    q1 = np.short(quaternions[3] << 8 | quaternions[2]) / 32768
+                    q2 = np.short(quaternions[5] << 8 | quaternions[4]) / 32768
+                    q3 = np.short(quaternions[7] << 8 | quaternions[6]) / 32768
+                    Q = list(np.array([q0, q1, q2, q3]))
+                    if identifier not in [b"T", b"I", b"M", b"R", b"L", b"H", b"A"]:
+                        print(f" Invalid Identifier <{identifier}>")
+                        continue
+                    Q_list[identifier.decode()] = Q
+                to_append = l2_squared_error_to_file(Q_list, l2_database, 4)
+                print(to_append)
+                f.write(to_append)
+                print(u'{}[2J{}[;H'.format(chr(27), chr(27)), end='')
 
 retry_s = 2
 controllerPort = "/tmp/ttyBLE10"
@@ -220,15 +215,18 @@ def main():
         print('// Mode 0 for displaying current gesture data')
         print('// Mode 1 for collecting gesture data for building dataset')
         print('// Mode 2 for defining gestures used for l2 algorithm')
+        print('// Mode 3 for collecting gesture data to file')
         ret = input('Select mode: ')
         if ret[-1] == 'q':
-            break
+            exit(1)
         elif ret[-1] == '0':
             display(ser)
         elif ret[-1] == '1':
             collect(ser, 'Mode 1')
         elif ret[-1] == '2':
             collect(ser, 'Mode 2')
+        elif ret[-1] == '3':
+            to_file(ser)
         else:
             print('Error: Mode Unsupported!')
 

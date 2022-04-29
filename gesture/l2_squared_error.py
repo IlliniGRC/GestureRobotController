@@ -9,26 +9,27 @@ def Qdis(Q1: Quaternion, Q2: Quaternion):
 
 def l2_vector(Q_finger: dict):
     f = list()
-    f.append(Quaternion(Q_finger['Thumb']))
-    f.append(Quaternion(Q_finger['Index']))
-    f.append(Quaternion(Q_finger['Middle']))
-    f.append(Quaternion(Q_finger['Ring']))
-    f.append(Quaternion(Q_finger['Little']))
-    f.append(Quaternion(Q_finger['Hand']))
+    f.append(Quaternion(Q_finger['T']))
+    f.append(Quaternion(Q_finger['I']))
+    f.append(Quaternion(Q_finger['M']))
+    f.append(Quaternion(Q_finger['R']))
+    f.append(Quaternion(Q_finger['L']))
+    f.append(Quaternion(Q_finger['H']))
+
     l2_v = list()
-    for a, b in combinations(f, 2):
-        l2_v.append(Qdis(a, b))
-    l2_v = np.array(l2_v)
-    return l2_v
+    for i in range(len(f)):
+        for j in range(i):
+            l2_v.append(Qdis(f[i], f[j]))
+    return np.array(l2_v)
 
 
-def l2_squared_error(curr_gesture: dict, gesture_data: dict, sensitivity):
-    curr_vector = l2_vector(curr_gesture)
+def l2_squared_error(curr_gesture: dict, database: dict, sensitivity):
     predict_gesture = -1
     l2_min = np.inf
-    for gesture_idx in gesture_data['dataset']:
-        dataset_gesture = gesture_data['dataset'][gesture_idx]['Quaternion']
-        dataset_vector = l2_vector(dataset_gesture)
+    curr_vector = l2_vector(curr_gesture)
+    for gesture_idx, gesture_quaternions in database.items():
+        gesture_idx = int(gesture_idx)
+        dataset_vector = l2_vector(gesture_quaternions)
         l2 = 0
         for element in range(len(curr_vector)):
             l2 += (curr_vector[element] - dataset_vector[element]) ** 2
@@ -38,4 +39,25 @@ def l2_squared_error(curr_gesture: dict, gesture_data: dict, sensitivity):
         print(f'Gesture {gesture_idx} l2: {l2}')
     if l2_min > sensitivity:
         return 404
-    return gesture_data['dataset'][predict_gesture]['tag']
+    return predict_gesture
+
+def l2_squared_error_to_file(curr_gesture: dict, database: dict, sensitivity):
+    to_ret = ""
+    predict_gesture = -1
+    l2_min = np.inf
+    curr_vector = l2_vector(curr_gesture)
+    for gesture_idx, gesture_quaternions in database.items():
+        gesture_idx = int(gesture_idx)
+        dataset_vector = l2_vector(gesture_quaternions)
+        l2 = 0
+        for element in range(len(curr_vector)):
+            l2 += (curr_vector[element] - dataset_vector[element]) ** 2
+        if l2 < l2_min:
+            predict_gesture = gesture_idx
+            l2_min = l2
+        to_ret += f"{l2},"
+    if l2_min > sensitivity:
+        to_ret += f"-1\n"
+    else:
+        to_ret += f"{predict_gesture}\n"
+    return to_ret

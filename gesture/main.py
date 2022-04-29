@@ -86,44 +86,39 @@ def main(args):
     init_z = 0
     flag_init = True
     while True:
-        count += 1
         controller.flush()
         robot.flush()
+        count += 1
         report = controller.read_until(expected=b"\r\n")
         if len(report) % 15 != 2:
             continue
+        Q_list = {}
         index = 0
         while index < len(report) - 2:
-            identifier, quaternions, accelerometers = report[index:index + 1], report[index + 1:index + 9], report[index + 9:index + 15]
+            identifier, quaternions = report[index:index + 1], report[index + 1:index + 9]
             index += 15
             q0 = np.short(quaternions[1] << 8 | quaternions[0]) / 32768
             q1 = np.short(quaternions[3] << 8 | quaternions[2]) / 32768
             q2 = np.short(quaternions[5] << 8 | quaternions[4]) / 32768
             q3 = np.short(quaternions[7] << 8 | quaternions[6]) / 32768
             Q = list(np.array([q0, q1, q2, q3]))
-            if identifier == b'T':  # Thumb
-                QT = Q
-            elif identifier == b'I':  # Index
-                QI = Q
-            elif identifier == b'M':  # Middle
-                QM = Q
-            elif identifier == b'R':  # Ring
-                QR = Q
-            elif identifier == b'L':  # Little
-                QL = Q
-            elif identifier == b'H':  # Hand
-                QH = Q
-        Q_list['Thumb'] = QT
-        Q_list['Index'] = QI
-        Q_list['Middle'] = QM
-        Q_list['Ring'] = QR
-        Q_list['Little'] = QL
-        Q_list['Hand'] = QH
+            if identifier not in [b"T", b"I", b"M", b"R", b"L", b"H", b"A"]:
+                print(f" Invalid Identifier <{identifier}>")
+                continue
+            Q_list[identifier.decode()] = Q
+        # print(f"Hand: {Q2Euler(Quaternion(Q_list['H']))}")
         if args.method == 'neural':
             print('use neural')
         elif args.method == 'l2' and count % 3 == 0:
-            gesture = l2_squared_error(Q_list, l2_database, 5)
+            gesture = l2_squared_error(Q_list, l2_database, 4)
+            angle = Q2Euler(Quaternion(Q_list["H"]))
             print(f'\nPrediction: {gesture}')
+            z_move = angle[2] - init_z
+            if z_move < -np.pi:
+                z_move += 2 * np.pi
+            elif z_move > np.pi:
+                z_move -= 2 * np.pi
+
             if gesture == 404:
                 if feedback_count >= 10:
                     feedback_count = 0
@@ -136,7 +131,6 @@ def main(args):
                     controller.write(b"b,1")
                 else:
                     feedback_count += 1
-                angle = Q2Euler(Quaternion(QH))
                 flag_init = False
                 init_z = angle[2]
                 print("hld|")
@@ -147,16 +141,14 @@ def main(args):
                     controller.write(b"b,2\nm,1")
                 else:
                     feedback_count += 1
-                angle = Q2Euler(Quaternion(QH))
-                z_move = angle[2] - init_z
                 # print(angle / np.pi * 180)
-                if abs(angle[1] * 100) < 20:
+                if abs(angle[1] * 150) < 25:
                     angle[1] = 0
                 if abs(angle[0] * 150) < 25:
                     angle[0] = 0
                 if abs(z_move * 100) < 25:
                     z_move = 0
-                ch0, ch1, ch2 = int(-angle[1] * 100), int(angle[0] * 150), int(-z_move * 100)
+                ch0, ch1, ch2 = int(-angle[1] * 150), int(angle[0] * 150), int(-z_move * 100)
                 ch0_bytes = ch0.to_bytes(2, "big", signed=True)
                 ch1_bytes = ch1.to_bytes(2, "big", signed=True)
                 ch2_bytes = ch2.to_bytes(2, "big", signed=True)
@@ -169,8 +161,7 @@ def main(args):
                     controller.write(b"m,3")
                 else:
                     feedback_count += 1
-                angle = Q2Euler(Quaternion(QH))
-                z_move = angle[2] - init_z
+
                 if abs(angle[0] * 150) < 20:
                     angle[0] = 0
                 if abs(z_move * 100) < 22:
