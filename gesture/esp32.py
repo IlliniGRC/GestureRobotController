@@ -68,8 +68,7 @@ def display(port):
         index = 0
         to_report = ''
         while index < len(report) - 2:
-            identifier, quaternions, accelerometers = report[index:index + 1], report[index + 1:index + 9], report[
-                                                                                                            index + 9:index + 15]
+            identifier, quaternions, accelerometers = report[index:index + 1], report[index + 1:index + 9], report[index + 9:index + 15]
             index += 15
             q0 = np.short(quaternions[1] << 8 | quaternions[0]) / 32768
             q1 = np.short(quaternions[3] << 8 | quaternions[2]) / 32768
