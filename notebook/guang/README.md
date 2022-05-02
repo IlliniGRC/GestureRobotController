@@ -23,12 +23,16 @@ We finally decide to divide the whole project into three subsystems.
 
 ## 2022-02-15 - L2 algorithm or AI
 
+The most difficult and major task is to design an algorithm to recognize and differentiate gestures. There are two methods that come up into my mind: L2 algorithm and AI model. The key idea behind L2 algorithm is simple: compare the current gesture with each gesture in database, calculate the L2 error between each pair, and output the gesture with the lowest L2 error. AI model is also suitable and it may work even better than L2 algorithm. For example, L2 algorithm may find it hard to recognize two similar gestures, but AI may find the key feature to distinguish them. Also, since gesture will continue to be the same one in a short time, Markov chain can be extremely useful to increase accuracy in AI model.
+
 The comparison table:
 
 |  | **Pros** | **Cons** |
 |---|---|---|
-| **L2** |  |  |
-| **AI** |  |  |
+| **L2** | 1. Easy to implement<br/>2. Can manually adjust the sensitivity, so in some cases, it will output "no gesture"<br/>3. New gesture can be added easily | 1. Only uses information about angles |
+| **AI** | 1. Can utilize dynamics like acceleration to recognize gesture<br/>2. By using Markov chain, the previous prediction can also help the next prediction<br/>3. Universal and general. In theory, it should perform better than L2 algorithm | 1. Hard to train and deploy<br/>2. Performance greatly influenced by the quality of dataset<br/>3. The prediction labels are fixed, so it would be difficult to add a new gesture<br/>4. Collecting dataset may consume us too much time |
+
+I will try both methods, and compare their performance in different settings. But, if we do not have enough time in the final stage, I may abandon the AI model method.
 
 ## 2022-02-19 - Find suitable modules for our project
 
@@ -71,8 +75,10 @@ The comparison table:
 
 |  | **Pros** | **Cons** |
 |---|---|---|
-| **STM32** |  |  |
-| **ESP32** |  |  |
+| **STM32** | 1. Extremely powerful<br/>2. Professional | 1. Expensive<br/>2. Need external modules to enable Bluetooth<br/>3. Difficult to write code and program it<br/>4. It has too many pins which makes hand soldering nearly impossible |
+| **ESP32** | 1. Builtin Bluetooth and WIFI module<br/>2. Cheap<br/>3. Support MicroPython library, so it is much easier to write code and debug<br/>4. It has small number of pins, but they are all universal | 1. Compute capability may not be enough (need verification) |
+
+So, after comparison and discussion, we decide to use ESP32 instead of STM32.
 
 ## 2022-02-29 - PCB review
 
@@ -90,7 +96,7 @@ The comparison table:
 
 ## 2022-03-26 - Encryption & JSON
 
-## 2022-03-28 - Redesign power system
+## 2022-03-28 - Redesign power system & Second PCB design
 
 ## 2022-04-02 - AI Model Design
 
