@@ -94,9 +94,17 @@ So, after comparison and discussion, we decide to use ESP32 instead of STM32.
 
 ## 2022-03-23 - First PCB board soldering and verification
 
+![first pcb board](/notebook/guang/first%20pcb.jpg)
+
 ## 2022-03-26 - Encryption & JSON
 
 ## 2022-03-28 - Redesign power system & Second PCB design
+
+![power system 1.0](/notebook/guang/first%20power%20system.png)
+
+The main target for the power supply module is to step up the 3.7 voltage from Lithium battery to 5 voltage and provide power for two ESP32 chips, sensors like IMUs, and actuators like LCD screen, LED, and vibration motor. The first version designed by Eric failed but he still hasn’t found the precise problem because the design is somewhat too complicated to analyze the correct behaviors for each component. The output port simply has no voltage, and we checked that soldering and wiring are correct, so it must be the design issue.
+
+![power system 2.0](/notebook/guang/second%20power%20system.png)
 
 ## 2022-04-02 - AI Model Design
 
