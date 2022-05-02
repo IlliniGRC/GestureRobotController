@@ -64,6 +64,7 @@ def main(args):
     time.sleep(1)
     robot_ble_thread.start()
 
+    # Wait for two "Running Main Loop" to appear on terminal
     input()
     controller = Serial(controllerPort)
     robot = Serial(robotPort)
@@ -71,12 +72,6 @@ def main(args):
     print('Opening robot: ' + robot.name)
 
     Q_list = dict()
-    QT = list()
-    QI = list()
-    QM = list()
-    QR = list()
-    QL = list()
-    QH = list()
 
     with open('gesture_l2.json', 'r') as f:
         l2_database = json.load(f)
@@ -120,31 +115,35 @@ def main(args):
                 z_move -= 2 * np.pi
 
             if gesture == 404:
+                # Feedback System
                 if feedback_count >= 10:
                     feedback_count = 0
                     controller.write(b"b,0")
                 else:
                     feedback_count += 1
             if gesture == 0:
+                # Feedback System
                 if feedback_count >= 10:
                     feedback_count = 0
                     controller.write(b"b,1")
                 else:
                     feedback_count += 1
+                # Force hold & init z
                 flag_init = False
                 init_z = angle[2]
                 print("hld|")
                 robot.write(b'hld|')
             if not flag_init and gesture == 1:
+                # Feedback System
                 if feedback_count >= 10:
                     feedback_count = 0
                     controller.write(b"b,2\nm,1")
                 else:
                     feedback_count += 1
-                # print(angle / np.pi * 180)
-                if abs(angle[1] * 150) < 25:
+                # Dead Zone
+                if abs(angle[1] * 220) < 35:
                     angle[1] = 0
-                if abs(angle[0] * 150) < 25:
+                if abs(angle[0] * 220) < 35:
                     angle[0] = 0
                 if abs(z_move * 100) < 25:
                     z_move = 0
@@ -156,12 +155,13 @@ def main(args):
                 print(buffer)
                 robot.write(buffer)
             if not flag_init and gesture == 2:
+                # Feedback System
                 if feedback_count >= 5:
                     feedback_count = 0
                     controller.write(b"m,3")
                 else:
                     feedback_count += 1
-
+                # Dead Zone
                 if abs(angle[0] * 150) < 20:
                     angle[0] = 0
                 if abs(z_move * 100) < 22:
