@@ -1,4 +1,4 @@
-# Haoduo Worklog
+# Haoduo's Worklog
 2022-02-05 	Project approval
 
 
@@ -22,12 +22,12 @@ We continued to work on the design document and attended the design review. TA o
 I drew the first draft of our PCB board, including a basic processor, a Bluetooth module, and a power module. We then revised it and submitted the first-round PCB order. Meanwhile, we made a list of all the components we need, and I started to purchesing them. Hopefully they will arrive before the spring break.
 
 # 2022-03-14 	Circuit Build
-With everything we needed, we started to solder the PCB board. Then Eric will test the Bluetooth function, and Guang and I will work on the gesture recognition algorithm. Guang proposed several approaches
+With everything we needed, we started to solder the PCB board. Then Eric will test the Bluetooth function, and Guang and I will work on the gesture recognition algorithm. Guang proposed several approaches. I started with WT901's datasheet. WT901 is the IMU we use to collect each finger's position and orientation. Its manufacturer, WitMotion, developed a driver. Though we are not planning to use it, I looked at its configuration to find out what data we might need. For gesture recognition, we need Quaternion, Angle, and Angular Velocity. For calibration, we need Magnetic Field.
 
+# 2022-03-28 	Finalize the PCB
+After testing the first-round PCB, we made some changes. We decided to add a buzzer and a display for feedback. Also, since one ESP32 is not powerful enough to handle all the tasks, we add another one. Based on our new needs, we redrew the PCB schematic. This is our new feedback system.
 
-
-
-
+# 2022-04-04	Finalize the PCB
 
 
 
