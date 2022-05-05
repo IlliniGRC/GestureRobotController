@@ -163,19 +163,19 @@ MCP1663 provides a EN port to control the on/off of the device, a SPDT is attach
 
 ### Final Schematic of First Version PCB - ATMega328
 
-![First PCB Schematic with ATMega328](INSERT FINAL SCHEMATIC HERE)
+![First PCB Schematic with ATMega328](PCB_ATMega328_schematics.svg)
 
 ### Final Layout of First Version PCB - ATMega328
 
-![First PCB Layout with ATMega328](INSERT FINAL LAYOUT HERE)
+![First PCB Layout with ATMega328](PCB_ATMega328_layout.jpg)
 
 ### Final Schematic of First Version PCB - ESP32
 
-![First PCB Schematic with ESP32](INSERT FINAL SCHEMATIC HERE)
+![First PCB Schematic with ESP32](PCB_ESP32v1_schematics.svg)
 
 ### Final Layout of First Version PCB - ESP32
 
-![First PCB Layout with ESP32](INSERT FINAL LAYOUT HERE)
+![First PCB Layout with ESP32](PCB_ESP32v1_layout.jpg)
 
 ### ESP32 Download Mode and Auto-program Circuit
 
@@ -219,7 +219,7 @@ We decide to solder the PCB with ESP32 first, as when I was developing the firmw
 
 We spent about 10-12 hours on our first PCB, the hardest part is to use hot air gun to mount FT232RL chip onto the surface, as the spacing between the legs of the chip is small comparing to other components.
 
-After soldering is complete, 
+After soldering is complete, system is then verified.
 
 ### System Verification
 
@@ -257,7 +257,7 @@ The chip is called `ME2108AP`, it also needs external inductor and capacitor to 
 
 ### Revised Power System Schematics
 
-![Revised Power System](INSERT FINAL SCHEMATIC HERE)
+![Revised Power System](RevisedPowerSystem.jpg)
 
 ### ME2108AP Datasheet
 
@@ -265,11 +265,11 @@ The chip is called `ME2108AP`, it also needs external inductor and capacitor to 
 
 ### Final Schematic of Second Version PCB
 
-![Second PCB Schematic](INSERT FINAL SCHEMATIC HERE)
+![Second PCB Schematic](PCB_ESP32v2_schematics.svg)
 
 ### Final Layout of Second Version PCB
 
-![Second PCB Layout](INSERT FINAL SCHEMATIC HERE)
+![Second PCB Layout](PCB_ESP32v2_layout.jpg)
 
 ## 2022-04-04 Writing and Testing Software
 
