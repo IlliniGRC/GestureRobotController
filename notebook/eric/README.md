@@ -5,6 +5,9 @@
 1. [Week 2022-02-07 Finding parts](#2022-02-07-finding-parts)
 2. [Week 2022-02-14 Testing Wit-Motion WT901](#2022-02-14-testing-wit-motion-wt901)
 3. [Week 2022-03-07 Designing PCB](#2022-03-07-designing-pcb)
+4. [Week 2022-03-21 Soldering and Redesigning PCB](#2022-03-21-soldering-and-redesigning-pcb)
+5. [Week 2022-04-04 Writing and Testing Software](#2022-04-04-writing-and-testing-software)
+6. [Week 2022-03-21 More Software and Second PCB](#2022-04-18-finishing-software-and-second-round-pcb)
 
 ## Important Notes
 
@@ -128,9 +131,9 @@ The design that uses ESP32 chip also use two ESP32 modules. It is influenced by 
 
 ### Power system
 
-The power system of two designs of the chips are basically the same, despite the fact that the ATMega328P chips need an input voltage of 5V while the ESP32-WROOM-32D modules only need 3.3V as input voltage. It is because we are trying to use a USB-to-UART chip that operates on 5V input voltage. The name of the chip series is FT232, and we want FT232RL in particular since that is easier to be soldered onto the PCB surface.
+The power system of two designs of the chips are basically the same, despite the fact that the ATMega328P chips need an input voltage of 5V while the ESP32-WROOM-32D modules only need 3.3V as input voltage. It is because we are trying to use a USB-to-UART chip that operates on 5V input voltage. The name of the chip series is `FT232`, and we want `FT232RL` in particular since that is easier to be soldered onto the PCB surface.
 
-The power system have to step-up and regulate the input voltage of the Li-ion battery (about 3.7V $\pm$ 0.3V) to 5V, then supply the FT232RL chip with 5V. So far the designs are the same for both parts.
+The power system have to step-up and regulate the input voltage of the Li-ion battery (about 3.7V $\pm$ 0.3V) to 5V, then supply the FT232RL chip with 5V. So far the designs are the same for both parts. The chip I choose here have the name `MCP1663`.
 
 The next part is supplying voltage to embedded CPUs. With ATmega328, we can directly supply the 5V directly, but for ESP32, we have several choices.
 
@@ -156,9 +159,30 @@ MCP1663 provides a EN port to control the on/off of the device, a SPDT is attach
 
 [MCP1663 Datasheet](https://ww1.microchip.com/downloads/en/DeviceDoc/20005406A.pdf)
 
+### Notes on the PCB Design
+
+- The two boards have the same design on programming and debugging of the chips. The programming UART lines of both of the processor is connected to the FT232 chip with switches in between to choose which chip to program. Although this gives the ability to program two chips through only one USB-to-UART bridge, the debug messages that are printed out by the two chips cannot make it to the monitor on the computer together.
+
+### Final Schematic of First Version PCB - ATMega328
+
+![First PCB Schematic with ATMega328](PCB_ATMega328_schematics.svg)
+
+### Final Layout of First Version PCB - ATMega328
+
+![First PCB Layout with ATMega328](PCB_ATMega328_layout.jpg)
+
+### Final Schematic of First Version PCB - ESP32
+
+![First PCB Schematic with ESP32](PCB_ESP32v1_schematics.svg)
+
+### Final Layout of First Version PCB - ESP32
+
+![First PCB Layout with ESP32](PCB_ESP32v1_layout.jpg)
+
 ### ESP32 Download Mode and Auto-program Circuit
 
-ESP32 have a native mode for the controller to be in a "download" mode, in which it receives subsequent bytes sent out to the controller the data to a file, then it will write 
+ESP32 have a native mode for the controller to be in a "download" mode, in which it receives subsequent bytes sent out to the controller the data to a file, then it will write contents to the internal file system subsequently.
+
 First pressing the `IO0` button, then press the `EN` button without releasing the `IO` button, then subsequently releasing `EN` and `IO0` button. This will drop you into download mode, and for a micropython firmware, ESP32 module should print to the command line as follows:
 
     rst:0x1 (POWERON_RESET),boot:0x7 (DOWNLOAD_BOOT(UART0/UART1/SDIO_REI_REO_V2))
@@ -168,7 +192,7 @@ However, this method involves manually pressing the buttons on the board, making
 
 ESP32 development boards often have a circuit consists of two BJT or MOSFET transistors and several resistors which is named "auto-program circuit". It is done using two outputs from the USB-to-UART chip, `DTR` and `RTS`.
 
-`DTR` stands for "Data Terminal Ready" and `RTS` stands for "Request to Send". For ESP32 to be auto-programed, the `DTR` is set to 1 first, then `RTS` will be set to 1, followed by an immediate set back to 0, then `DTR` also set back to zero. Also, for the circuit to receive a reset command from the chip, the RST can be brought down to zero individually. 
+`DTR` stands for "Data Terminal Ready" and `RTS` stands for "Request to Send". For ESP32 to be auto-programed, the `DTR` is set to 1 first, then `RTS` will be set to 1, followed by an immediate set back to 0, then `DTR` also set back to zero. Also, for the circuit to receive a reset command from the chip, the RST can be brought down to zero individually.
 
 So overall, for doing this automatically, a circuit need to be constructed with a truth table as follows.
 
@@ -189,3 +213,116 @@ The ESP32 development boards on the market right now are using UART-to-USB chips
 
 Useful when trying to create custom logos that would be displayed on the SSD1306.
 [Image to binary image converter](https://www.dcode.fr/binary-image?__r=1.f155588443de719d03c97616d360cfb7)
+
+## 2022-03-21 Soldering and Redesigning PCB
+
+### Soldering
+
+We decide to solder the PCB with ESP32 first, as when I was developing the firmware for the OLED display, I found out that even the simplest the driver will take up to 80% of the flash memory of the ATMega328 chip, but since the ESP32 modules have a far larger (512kB compares to 32kB) flash memory, there will be plenty flash space left for other possible code.
+
+We spent about 10-12 hours on our first PCB, the hardest part is to use hot air gun to mount FT232RL chip onto the surface, as the spacing between the legs of the chip is small comparing to other components.
+
+After soldering is complete, system is then verified.
+
+### System Verification - V1
+
+These systems works correctly on the first version PCB
+
+- USB-to-UART bridge. When micro-USB cable is attached to the board, running command `lsusb` on a linux machine will show a device called "FDTI FT232 USB to UART bridge". This indicates that the chip is correctly connected to USB port.
+- ESP32 module. After attaching micro-ISB cable, I am able to flush the MicroPython firmware onto the board, and triggering its REPL. The later test interactions with the REPL shows that the firmware are correctly downloaded and the module can execute MicroPython command with no difference than a development board.
+- Basic I/O, including buttons, vibration motors, and buzzer. These devices that attached on the GPIO ports of the ESP32 module can respond to corresponding commands issued to the ESP32.
+- Display. The two reserved ports for the display are running correctly both when one of the display is connected, and when both of them are connected.
+- Local UART communication. The connection that utilizes the GPIO 17 and 18 for the purpose of RX and TX line of UART communication respectively. Messages can be sent in between the two controllers with negligible delay correctly.
+- Auto-program circuit. The circuit can respond to the commands that the Arduino and other programming software sends and entering corresponding mode correctly.
+- External Bluetooth communication. After the code for initiating and operating of the Bluetooth is deployed on the ESP32 modules, the bluetooth can send and receive messages just like a wireless UART connection.
+
+These systems fails on the first version PCB
+
+- Power system. After soldering complete and I try to power the module through digital power supply, when the voltage reaches 3.7V, which is normally the Li-ion battery operating voltage, the power system chip, specifically the `MCP1663`, starts to smoke.
+
+### Why Redesigning PCB
+
+There are several reasons for redesigning the PCB.
+
+- Power system failure. The power system cannot provide any power to the system, and instead, it smokes and burns. This indicate that the system need a completely new design, probably with another chip that have large commercial use as there will be more schematics and designs for us to reference to.
+- Bad mounting method for buzzer and vibration motor. Now the two devices are not surface mounted, they are connected through JST-XH connectors. This make them hang in the air, and thus easily broke during the operating process.
+- Switches that controls the flow of data. I designed the switches to be surface-mount types, but it turns out the footprint I downloaded is different from the actual footprint, the soldering pads are closer together than expected. Also, the switches are designed too close to each other, making surface mount almost impossible.
+- Instructions on the silkscreen. Now there is only instruction on the power system that let user know which side of the switch indicates power on and which side indicates power off. The UART and auto-program switches does not have indication of functionality on the silkscreen.
+- Back side of PCB is not utilized. Some of the ICs can potentially transferred to the back side of the PCB to make the design more compact.
+
+### Power System Redesign
+
+We found another chip that can provide the functionality to step-up voltage from around 3.7V to 5V DC. It is a part of a commercial step-up regulator module that sells on Amazon ([Link to the module](https://www.amazon.com/Comidox-Module-Voltage-Converter-0-9-5V/dp/B07L76KLRY/ref=sr_1_3?keywords=3.7v+to+5v+boost+converter&qid=1651513897&sr=8-3)).
+
+The chip is called `ME2108AP`, it also needs external inductor and capacitor to operate correctly. Our design references to the "Typical Applications" page of the manufacturer, which contains a picture as follows.
+
+![ME2108AP Reference Design](ME2108AP.png)
+
+### Revised Power System Schematics
+
+![Revised Power System](RevisedPowerSystem.jpg)
+
+### ME2108AP Datasheet
+
+[ME2108AP Datasheet](https://datasheet.lcsc.com/szlcsc/Nanjing-Micro-One-Elec-ME2108A33M3G_C236804.pdf)
+
+### Final Schematic of Second Version PCB
+
+![Second PCB Schematic](PCB_ESP32v2_schematics.svg)
+
+### Final Layout of Second Version PCB
+
+![Second PCB Layout](PCB_ESP32v2_layout.jpg)
+
+## 2022-04-04 Writing and Testing Software
+
+### MicroPython
+
+We choose MicroPython as our developing language mainly because just like Python on PC, it is easy to use, and provides REPL terminal for easy development and debug. I have listed a couple pros and cons for the usage of MicroPython.
+
+- \+ Easy to use. Unlike C or C++, code in python does not need to be manually compiled and downloaded to the microprocessor in order for the code to run. Instead, the REPL provided by MicroPython provides developers with the ability to directly run the commands on the microcontroller through REPL.
+- \+ Have internal filesystem. It can be used to save and load data between each successive bootup without going through the painful process of trying to store data using flash memory when using C++ with Arduino.
+- \+ Code implementation is concise and neat. Comparing to C and C++, Python is famous for its conciseness and neatness. Although python cannot let the developers control every single aspect of the code from executing to memory allocation, it takes less amount of code in Python to do the same work in C++, especially in the case of lacking supporting library.
+- \- UART does not have the ability to trigger IRQ when a message arrives. Polling is required for checking if a message has arrived.
+- \- Time wasted at every bootup. Before running the code, the processor will take time to load and compile the code that is written in its internal file system. When there is a large amount of code needed to be loaded, the loading process can take up to several seconds.
+- \- PWM control interface is not clear and hard to use. When creating a PWM instance, the system seems to look for a timer that is not in use, or matches with the input parameters, but the interfaces MicroPython provided does not let you to pick a specific timer for that PWM. As a result, it is hard to control the PWM actions.
+- \- Multithreading is not efficiently supported. Although MicroPython provides the basic functionality of multithreading, it only provided the basics such as running a new thread and locks. I have to write a thread pool on my own in order to monitor the threads running concurrently. However, the scheduling of the threads are also done poorly, which some thread stopped responding several seconds after spawning. This drives me to a timer-interrupt based system rather than a multi-threading system in later design.
+
+### Buzzers
+
+Buzzer are typically driven through PWMs, which rely on hardware clock to produce such a pulse. Because the buzzer need to change the frequency to produce different sounds, one hardware timer will be dedicated to use as buzzer clock.
+
+### Vibration Motors
+
+Although vibration motors does not necessarily driven by PWM signals, the code that used to be control the buzzers can be modified a little bit to make it work with vibration motors also, so I decide to drive the motor with PWM also.
+
+### Timer Usage
+
+The ESP32-WROOM-32D we are using now have 4 hardware clocks and total 16 channels. The Timers on the Main ESP32 are used as follows
+
+- #0 for UART polling
+
+The Timers on the Peripheral ESP32 are used as follows
+
+- #0 for UART polling
+- #1 for PWM controller periodic interrupt
+- #2 for PWM driving buzzer
+- #3 for PWM driving vibration motor
+
+## 2022-04-18 Finishing Software and Second Round PCB
+
+### System Verification - V2
+
+These systems works correctly on the second version PCB that does not work on first version PCB.
+
+- Power system. The system can provide the whole board with power through external Li-ion battery without adding additional components other than the designed components.
+- Switches. Using through-hole switches decrease the difficulty of soldering surface-mount components, making the connections more reliable.
+- Buzzer and vibration motor. They work correctly when they are surface mounted instead of through JST-XH connectors.
+
+### Software System Verification
+
+Final version software is loaded to the PCB version two, there is no observable problem with the new board.
+
+Code for secondary controller is tested to be working.
+
+Notice! Loose wires connected to the IMU I2C port will cause the software to function abnormally, as MicroPython will output fatal error when the I2C address it is querying does not exist / not connected.
