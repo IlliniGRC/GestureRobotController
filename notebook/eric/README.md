@@ -224,7 +224,7 @@ We spent about 10-12 hours on our first PCB, the hardest part is to use hot air 
 
 After soldering is complete, system is then verified.
 
-### System Verification
+### System Verification - V1
 
 These systems works correctly on the first version PCB
 
@@ -310,3 +310,19 @@ The Timers on the Peripheral ESP32 are used as follows
 - #3 for PWM driving vibration motor
 
 ## 2022-04-18 Finishing Software and Second Round PCB
+
+### System Verification - V2
+
+These systems works correctly on the second version PCB that does not work on first version PCB.
+
+- Power system. The system can provide the whole board with power through external Li-ion battery without adding additional components other than the designed components.
+- Switches. Using through-hole switches decrease the difficulty of soldering surface-mount components, making the connections more reliable.
+- Buzzer and vibration motor. They work correctly when they are surface mounted instead of through JST-XH connectors.
+
+### Software System Verification
+
+Final version software is loaded to the PCB version two, there is no observable problem with the new board.
+
+Code for secondary controller is tested to be working.
+
+Notice! Loose wires connected to the IMU I2C port will cause the software to function abnormally, as MicroPython will output fatal error when the I2C address it is querying does not exist / not connected.
