@@ -1,6 +1,8 @@
 import time
 import driver.utils as utils
 
+from driver.io import VibrationMotor, Buzzer
+
 from functionality.board import Board
 from functionality.communication import Communication as Com
 
@@ -14,8 +16,8 @@ def main():
   # auxiliary initializations
   Board.auxiliary_init()
   # buzzer and vmotor indicating running
-  Board.buzzer.sound_bootup()
-  Board.vmotor.slight_vibration()
+  Board.buzzer.custom_sound(Buzzer.bootup)
+  Board.vmotor.custom_vibration(VibrationMotor.slight_seq)
 
   # waiting for main controller to connect
   while True:

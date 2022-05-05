@@ -146,25 +146,15 @@ class PWMOutput:
 class VibrationMotor(PWMOutput):
   """ Class extends from PWMOutput that used to control vibration motor """
   SEQ_END = 0
-  slight_seq = array.array('i', [1023, 4,  SEQ_END, 1])
-  medium_seq = array.array('i', [1023, 8,  SEQ_END, 1])
-  heavy_seq  = array.array('i', [1023, 16, SEQ_END, 1])
+  slight_seq = array.array('i', [1023, 6,  SEQ_END, 1])
+  medium_seq = array.array('i', [1023, 12,  SEQ_END, 1])
+  heavy_seq  = array.array('i', [1023, 18, SEQ_END, 1])
+  double_seq = array.array('i', [1023, 6, 0, 6, 1023, 6, SEQ_END, 1])
+  triple_seq = array.array('i', [1023, 6, 0, 6, 1023, 6, 0, 6, 1023, 6, SEQ_END, 1])
 
   def __init__(self, id: int, buf_size: int = 50) -> None:
     super().__init__(id, PWMOutput.DUTY_MODE, buf_size, freq=2000, duty=0)
     self.__pwm.duty(0)
-
-  def slight_vibration(self) -> bool:
-    """ Vibration motor slightly vibrates, non-blocking """
-    return self.custom_vibration(VibrationMotor.slight_seq)
-
-  def medium_vibration(self) -> bool:
-    """ Vibration motor moderately vibrates, non-blocking """
-    return self.custom_vibration(VibrationMotor.medium_seq)
-
-  def heavy_vibration(self) -> bool:
-    """ Vibration motor heavily vibrates, non-blocking """
-    return self.custom_vibration(VibrationMotor.heavy_seq)
 
   def custom_vibration(self, seq: array.array) -> bool:
     """ Command the vibration motor using user defined sequence 
@@ -193,15 +183,19 @@ class Buzzer(PWMOutput):
   FG = array.array('i', [23, 46, 93, 185, 370, 740, 1480, 2960, 5920])
   G =  array.array('i', [25, 49, 98, 196, 392, 784, 1568, 3136, 6272])
   GA = array.array('i', [26, 52, 104, 208, 415, 831, 1661, 3322, 6645])
-  PAUSE = 1
+  PAUSE = 100
   SEQ_END = 1
 
   VOLUME_MAX = 4000
   VOLUME_GRANULARITY = 10
 
-  START_UP = array.array('i', [C[6], 2, D[6], 2, E[6], 2, F[6], 2, G[6], 2, SEQ_END, 2])
+  bootup = array.array('i', [C[6], 2, D[6], 2, E[6], 2, F[6], 2, G[6], 2, SEQ_END, 2])
+  double_seq = array.array('i', [E[6], 2, PAUSE, 2, E[6], 2, SEQ_END, 2])
+  triple_seq = array.array('i', [E[6], 2, PAUSE, 2, E[6], 2, PAUSE, 2, E[6], 2, SEQ_END, 2])
+  long_seq = array.array('i', [E[6], 10, SEQ_END, 2])
+  double_long_seq = array.array('i', [E[6], 10, PAUSE, 10, E[6], 10, SEQ_END, 2])
   
-  MYSTERY = array.array("i", [
+  mystery = array.array("i", [
     G[5], 4, A[5], 4, C[6], 4, A[5], 4, E[6], 11, PAUSE, 1, E[6], 12, D[6], 18, 
     G[5], 4, A[5], 4, C[6], 4, A[5], 4, D[6], 11, PAUSE, 1, D[6], 12, C[6], 18, 
     G[5], 4, A[5], 4, C[6], 4, A[5], 4, C[6], 12, D[6], 12, B[5], 4, A[5], 4, G[5], 4, D[6], 8, C[6], 22, 
@@ -209,13 +203,15 @@ class Buzzer(PWMOutput):
     G[5], 4, A[5], 4, C[6], 4, A[5], 4, G[6], 12, B[5], 12, C[6], 18, 
     G[5], 4, A[5], 4, C[6], 4, A[5], 4, C[6], 12, D[6], 12, B[5], 4, A[5], 4, G[5], 4, D[6], 8, C[6], 22])
 
-  def __init__(self, id: int, volume: int, buf_size: int = 100) -> None:
+  def __init__(self, id: int, volume: int, buf_size: int = 120) -> None:
     super().__init__(id, PWMOutput.FREQ_MODE, buf_size, freq=1, duty=0)
     self.__volume = volume
     self.set_volume(self.__volume)
   
   def set_volume(self, percentage: int) -> None:
-    utils.EXPECT_TRUE(percentage >= 0 and percentage <= 100, "Buzzer invalid volume percentage")
+    if percentage < 0 or percentage > 100:
+      utils.EXPECT_TRUE(False, f"Buzzer invalid volume percentage <{percentage}>")
+      return
     self.__volume = percentage // Buzzer.VOLUME_GRANULARITY * Buzzer.VOLUME_GRANULARITY
     self.__pwm.duty_u16(Buzzer.VOLUME_MAX * self.__volume // 100)
     try:
@@ -226,12 +222,6 @@ class Buzzer(PWMOutput):
 
   def get_volume(self) -> int:
     return self.__volume
-
-  def sound_bootup(self) -> bool:
-    return self.custom_sound(Buzzer.START_UP)
-
-  def sound_mystery(self) -> bool:
-    return self.custom_sound(Buzzer.MYSTERY)
 
   def custom_sound(self, seq: array.array) -> None:
     """ Command the buzzer using user defined sequence 

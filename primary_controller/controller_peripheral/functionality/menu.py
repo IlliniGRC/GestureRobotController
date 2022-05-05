@@ -13,6 +13,7 @@ class Menu:
   settings_menu = None
   general_menu = None
   configs_menu = None
+  others_menu = None
   volume_menu = None
 
   # special menu
@@ -35,11 +36,10 @@ class Menu:
     cls.main_menu.add_choice(48, 42, ["Info"])
 
     cls.settings_menu = Menu()
-    cls.settings_menu.add_choice(36, 4, ["General"])
-    cls.settings_menu.add_choice(40, 16, ["Config"])
-    cls.settings_menu.add_choice(44, 28, ["Snake"])
-    cls.settings_menu.add_choice(36, 40, ["Mystery"])
-    cls.settings_menu.add_choice(48, 52, ["Back"])
+    cls.settings_menu.add_choice(36, 7, ["General"])
+    cls.settings_menu.add_choice(40, 21, ["Config"])
+    cls.settings_menu.add_choice(40, 35, ["Others"])
+    cls.settings_menu.add_choice(48, 49, ["Back"])
 
     cls.general_menu = Menu()
     cls.general_menu.add_choice(40, 6, ["Volume"])
@@ -51,6 +51,11 @@ class Menu:
     cls.configs_menu.add_choice(12, 14, ["Create Config"])
     cls.configs_menu.add_choice(12, 28, ["Manage Config"])
     cls.configs_menu.add_choice(48, 42, ["Back"])
+    
+    cls.others_menu = Menu()
+    cls.others_menu.add_choice(44, 14, ["Snake"])
+    cls.others_menu.add_choice(36, 28, ["Mystery"])
+    cls.others_menu.add_choice(48, 42, ["Back"])
 
     cls.volume_menu = Menu()
     cls.volume_menu.add_choice(38, 35, ["-"])

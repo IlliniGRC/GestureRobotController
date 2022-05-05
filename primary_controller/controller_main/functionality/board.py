@@ -109,7 +109,8 @@ class Board:
 
   @classmethod
   def ble_rx_callback(cls, msg) -> None:
-    cls.uart1_com.send(Com.BLUETOOTH, msg)
+    print(len(msg))
+    cls.uart1_com.send(Com.BLUETOOTH, *msg.split(b"\n"))
 
   @classmethod
   def estimate_polling_rate(cls, imus: list, count: int, quaternion: bool=False) -> float:
@@ -223,7 +224,7 @@ class Board:
           f"Bluetooth name must have a length between 1 and 8, current name <{name}> has length {len(name)}")
 
   @classmethod
-  def operation_begin(cls):
+  def polling_send_loop(cls):
     cls.uart1_com.send(Com.CONFIRM, Com.BEGIN)
     cls.imus = list(WT901.inited_positions.values())
     timer = machine.Timer(1)
@@ -256,7 +257,7 @@ class Board:
         elif msg == Com.BULK: # setting imu position
           cls.set_imu_positions()
         elif msg == Com.BEGIN: # begin operation
-          cls.begin_operation()
+          cls.polling_send_loop()
         cls.state = cls.State.IDLE
       elif cls.state == cls.State.BLUETOOTH:
         msg = cls.uart1_com.read(Com.BLUETOOTH)
@@ -264,6 +265,11 @@ class Board:
           pass
         elif msg == Com.NAME:
           cls.uart1_com.send(Com.CONFIRM, cls.ble.get_current_advertise_name())
+        elif msg == Com.CONNECTED:
+          if Board.ble.is_connected():
+            cls.uart1_com.send(Com.CONFIRM, "")
+          else:
+            cls.uart1_com.send(Com.REJECT, "Bluetooth not connected")
         elif msg == Com.BULK:
           cls.change_bluetooth_advertise_name()
         cls.state = cls.State.IDLE

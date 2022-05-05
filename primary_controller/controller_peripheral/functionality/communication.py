@@ -27,6 +27,7 @@ class Communication:
   ADDRESS = b'addr'
   SPEED = b'speed'
   NAME = b'name'
+  CONNECTED = b'connected'
 
   def __init__(self) -> None:
     self.__uart1 = UARTCallback(1, tx=18, rx=17)

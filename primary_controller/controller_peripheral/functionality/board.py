@@ -1,7 +1,7 @@
 import machine, _thread, time, gc
 
 import driver.utils as utils
-from driver.display import OLED
+from driver.display import OLED, Drawing
 from driver.status_led import StatusLed
 from driver.threading import ThreadSafeQueue
 from driver.io import Button, Buzzer, PWMOutput, VibrationMotor
@@ -749,11 +749,16 @@ class Board:
   def start_operation(cls, display: OLED) -> None:
     gc.collect()
     display_direct = display.get_direct_control()
-
+    # display loading screen
+    display.lock.acquire()
+    display.display_loading_screen()
+    display.lock.release()
+    # check if a config is selected
     config_name = Config.get_default_config()
     if config_name == Config.no_default_config:
       # no default config, report warning
       display.lock.acquire()
+      display_direct.fill(0)
       display_direct.text("No default", 24, 12)
       display_direct.text("config selected", 4, 28)
       display.lock.release()
@@ -764,9 +769,34 @@ class Board:
       display_direct.fill(0)
       display.lock.release()
       return
-    display.lock.acquire()
-    display.display_loading_screen()
-    display.lock.release()
+    # check if bluetooth is connected
+    cls.uart1_com.send(Com.BLUETOOTH, Com.CONNECTED)
+    ret, _ = cls.uart1_com.wait_for_reject_or_confirm()
+    if not ret:
+      cls.uart1_com.send(Com.BLUETOOTH, Com.NAME)
+      display.lock.acquire()
+      display_direct.fill(0)
+      display_direct.text("Bluetooth", 16, 4)
+      display_direct.text("Not Connected", 0, 12)
+      display_direct.blit(Drawing.get_warning_sign(), 108, 3)
+      display_direct.text("Connect to", 24, 24)
+      display.lock.release()
+      
+      name = cls.uart1_com.blocking_read(Com.CONFIRM)
+
+      display.lock.acquire()
+      display_direct.fill_rect(64 - len(name) * OLED.CHAR_WIDTH // 2, 33, 
+          len(name) * OLED.CHAR_WIDTH, 9, 1)
+      display_direct.text(name, 64 - len(name) * OLED.CHAR_WIDTH // 2, 34, 0)
+      display_direct.text("To Continue", 20, 44)
+      display.lock.release()
+      Menu.B_menu.change_x_offset(47)
+      Menu.B_menu.change_y_offset(53)
+      cls.display_menu_and_get_choice(display, Menu.B_menu, undisplay=False)
+      display.lock.acquire()
+      display_direct.fill(0)
+      display.lock.release()
+      return
     # load default config
     config = Config()
     config.associate_with_file(config_name)
@@ -777,6 +807,7 @@ class Board:
     ret = Board.uart1_com.blocking_read(Com.CONFIRM)
     utils.ASSERT_TRUE(ret == Com.BULK,
         f"Operation bulk communication failed at begining, unexpected <{ret.decode()}>")
+    # send config to main controller
     success = True
     for message in messages:
       Board.uart1_com.send(Com.IMU, message)
@@ -806,7 +837,59 @@ class Board:
     display.lock.release()
     Menu.B_menu.change_x_offset(47)
     Menu.B_menu.change_y_offset(43)
-    cls.display_menu_and_get_choice(display, Menu.B_menu, undisplay=False)
+    Menu.B_menu.display_choices(display)
+    Board.uart1_com.discard_all(Com.BLUETOOTH)
+    while True:
+      if Board.is_button_pending():
+        if Board.get_button_message() == Board.BUTTON2:
+          break
+      if Com.BLUETOOTH in Board.uart1_com.pending_categories():
+        msg = Board.uart1_com.read(Com.BLUETOOTH).decode()
+        request, num = msg.split(",")
+        request = request.lower()
+        print(request, num)
+        if request == "m":
+          if num == "0":
+            Board.vmotor.custom_vibration(VibrationMotor.slight_seq)
+          elif num == "1":
+            Board.vmotor.custom_vibration(VibrationMotor.medium_seq)
+          elif num == "2":
+            Board.vmotor.custom_vibration(VibrationMotor.heavy_seq)
+          elif num == "3":
+            Board.vmotor.custom_vibration(VibrationMotor.double_seq)
+          elif num == "4":
+            Board.vmotor.custom_vibration(VibrationMotor.triple_seq)
+          else:
+            utils.EXPECT_TRUE(False, f"Bluetooth invalid vmotor request index <{num}>")
+        elif request == "b":
+          if num == "0":
+            Board.buzzer.custom_sound(Buzzer.double_seq)
+          elif num == "1":
+            Board.buzzer.custom_sound(Buzzer.triple_seq)
+          elif num == "2":
+            Board.buzzer.custom_sound(Buzzer.long_seq)
+          elif num == "3":
+            Board.buzzer.custom_sound(Buzzer.double_long_seq)
+          else:
+            utils.EXPECT_TRUE(False, f"Bluetooth invalid buzzer request index <{num}>")
+        elif request == "vr":
+          try:
+            volume = int(num)
+          except Exception:
+            utils.EXPECT_TRUE(False, f"Bluetooth invalid relative volume <{num}>")
+          Board.buzzer.set_volume(Board.buzzer.get_volume() + volume)
+        elif request == "va":
+          try:
+            volume = int(num)
+          except Exception:
+            utils.EXPECT_TRUE(False, f"Bluetooth invalid absolute volume <{num}>")
+          Board.buzzer.set_volume(volume)
+        else:
+          utils.EXPECT_TRUE(False, f"Bluetooth invalid request <{request}>")
+      time.sleep_ms(100)
+    Menu.B_menu.undisplay_choices(display)
+    Board.get_all_button_message()
+
     # operation over
     Board.uart1_com.send(Com.IMU, Com.TERMINATE)
     ret = Board.uart1_com.blocking_read(Com.CONFIRM)
@@ -870,6 +953,13 @@ class Board:
     ret = Board.uart1_com.blocking_read(Com.CONFIRM).decode()
     report += f"Bluetooth Name:\n  {ret}\n"
 
+    cls.uart1_com.send(Com.BLUETOOTH, Com.CONNECTED)
+    ret, _ = Board.uart1_com.wait_for_reject_or_confirm()
+    if ret:
+      report += f"Ble Status:\n  Connected\n"
+    else:
+      report += f"Ble Status:\n  Unconnected\n"
+
     current_config_name = Config.get_default_config().split(".")[0]
     report += f"Current Config\n  {current_config_name}\n"
 
@@ -911,18 +1001,13 @@ class Board:
       elif current_menu == Menu.settings_menu:
         choice_idx = Board.display_menu_and_get_choice(Board.main_display, current_menu)
 
-        if choice_idx == 0: # Load Config
+        if choice_idx == 0: # General Menu
           current_menu = Menu.general_menu
-        elif choice_idx == 1:
+        elif choice_idx == 1: # Configs Menu
           current_menu = Menu.configs_menu
-        elif choice_idx == 2: # Snake
-          Board.begin_snake_game(Board.main_display, max_score=40)
-          current_menu = Menu.settings_menu
-        elif choice_idx == 3: # Mystery
-          Board.buzzer.sound_mystery()
-          current_menu.change_highlight(0) # reset highlight
-          current_menu = Menu.main_menu
-        elif choice_idx == 4: # Back
+        elif choice_idx == 2: # Others Menu
+          current_menu = Menu.others_menu
+        elif choice_idx == 3: # Back
           current_menu.change_highlight(0) # reset highlight
           current_menu = Menu.main_menu
 
@@ -951,6 +1036,20 @@ class Board:
           while Board.manage_config(Board.main_display):
             pass
           current_menu = Menu.configs_menu
+        elif choice_idx == 2: # Back
+          current_menu.change_highlight(0) # reset highlight
+          current_menu = Menu.settings_menu
+      
+      elif current_menu == Menu.others_menu:
+        choice_idx = Board.display_menu_and_get_choice(Board.main_display, current_menu)
+        
+        if choice_idx == 0: # Snake
+          Board.begin_snake_game(Board.main_display, max_score=40)
+          current_menu = Menu.others_menu
+        elif choice_idx == 1: # Mystery
+          Board.buzzer.custom_sound(Buzzer.mystery)
+          current_menu.change_highlight(0) # reset highlight
+          current_menu = Menu.main_menu
         elif choice_idx == 2: # Back
           current_menu.change_highlight(0) # reset highlight
           current_menu = Menu.settings_menu

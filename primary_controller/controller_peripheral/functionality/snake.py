@@ -104,7 +104,7 @@ class SnakeGame:
     if self.__snake_body.collide_with_wall(next_x, next_y) or self.__snake_body.collide_with_body(next_x, next_y):
       self.game_over(self.__cur_len - 1)
       if vmotor != None:
-        vmotor.medium_vibration()
+        vmotor.custom_vibration(VibrationMotor.heavy_seq)
       return False
 
     if next_x == self.__food_x and next_y == self.__food_y:
@@ -116,10 +116,10 @@ class SnakeGame:
       if self.__cur_len >= self.__max_len:
         self.game_win(self.__cur_len - 1)
         if vmotor != None:
-          vmotor.heavy_vibration()
+          vmotor.custom_vibration(VibrationMotor.heavy_seq)
         return False
       if vmotor != None:
-        vmotor.slight_vibration()
+        vmotor.custom_vibration(VibrationMotor.slight_seq)
 
     undisplay = self.__snake_body.step_forward(next_x, next_y)
 
