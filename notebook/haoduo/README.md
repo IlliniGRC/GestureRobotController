@@ -27,7 +27,6 @@ With everything we needed, we started to solder the PCB board. Then Eric will te
 # 2022-03-28 	Finalize the PCB
 After testing the first-round PCB, we made some changes. We decided to add a buzzer and a display for feedback. Also, since one ESP32 is not powerful enough to handle all the tasks, we add another one. Based on our new needs, we redrew the PCB schematic. This is our new feedback system.
 
-# 2022-04-04	Finalize the PCB
-
-
+# 2022-04-04	Data Retrieval
+Before putting IMUs on the glove, I simulated some gestures to gather the data. With the input data, our program can save it as a gesture. These saved gestures are later used when compared to the gesture user is making. Then, we applied the L2 algorithm to determine the right gesture.
 
