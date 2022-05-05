@@ -6,6 +6,8 @@
 2. [Week 2022-02-14 Testing Wit-Motion WT901](#2022-02-14-testing-wit-motion-wt901)
 3. [Week 2022-03-07 Designing PCB](#2022-03-07-designing-pcb)
 4. [Week 2022-03-21 Soldering and Redesigning PCB](#2022-03-21-soldering-and-redesigning-pcb)
+5. [Week 2022-04-04 Writing and Testing Software](#2022-04-04-writing-and-testing-software)
+6. [Week 2022-03-21 More Software and Second PCB](#2022-04-18-finishing-software-and-second-round-pcb)
 
 ## Important Notes
 
@@ -179,7 +181,8 @@ MCP1663 provides a EN port to control the on/off of the device, a SPDT is attach
 
 ### ESP32 Download Mode and Auto-program Circuit
 
-ESP32 have a native mode for the controller to be in a "download" mode, in which it receives subsequent bytes sent out to the controller the data to a file, then it will write 
+ESP32 have a native mode for the controller to be in a "download" mode, in which it receives subsequent bytes sent out to the controller the data to a file, then it will write contents to the internal file system subsequently.
+
 First pressing the `IO0` button, then press the `EN` button without releasing the `IO` button, then subsequently releasing `EN` and `IO0` button. This will drop you into download mode, and for a micropython firmware, ESP32 module should print to the command line as follows:
 
     rst:0x1 (POWERON_RESET),boot:0x7 (DOWNLOAD_BOOT(UART0/UART1/SDIO_REI_REO_V2))
@@ -305,3 +308,5 @@ The Timers on the Peripheral ESP32 are used as follows
 - #1 for PWM controller periodic interrupt
 - #2 for PWM driving buzzer
 - #3 for PWM driving vibration motor
+
+## 2022-04-18 Finishing Software and Second Round PCB
