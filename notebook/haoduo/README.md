@@ -38,5 +38,7 @@ After testing the first-round PCB, we made some changes. We decided to add a buz
 Before putting IMUs on the glove, I simulated some gestures to gather the data. With the input data, our program can save it as a gesture. These saved gestures are later used when compared to the gesture user is making. Then, we applied the L2 algorithm to determine the right gesture.
 
 ![Alt text](https://github.com/IlliniGRC/GestureRobotController/blob/main/notebook/haoduo/code.png)
+
 ![Alt text](https://github.com/IlliniGRC/GestureRobotController/blob/main/notebook/haoduo/dataset.png)
+
 ![Alt text](https://github.com/IlliniGRC/GestureRobotController/blob/main/notebook/haoduo/L2.png)
