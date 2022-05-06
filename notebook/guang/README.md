@@ -140,11 +140,44 @@ My first implementation is quite naïve, but it demonstrates the general procedu
 
 ![BLE 1.0](/notebook/guang/ble_1.0.jpg)
 
-## 2022-03-16 - L2 Algorithm Design
-
-## 2022-03-18 - Euler Angles, Rotation Matrix, or Quaternion?
+## 2022-03-16 - Euler Angles, Rotation Matrix, or Quaternion?
 
 There three popular orientation representation systems: Euler angles, rotation matrix, and Quaternions. Euler angles are intuitive and Human-readable but suffer from singularities. Rotation matrix works fine in theory, but it needs 9 entries to store orientation, and needs more computing power compared with Quaternions which only have 4 elements for one orientation in 3D space. It is also easy to compute geodesic differences between two groups of Quaternions. So, Quaternions are used as our primary data structure to store IMU orientation information, but Euler angles are also used for debugging.
+
+## 2022-03-18 - L2 Algorithm Design
+
+L2 algorithm only uses Euler angles to distinguish different gestures, and it assumes that the gesture is static (do not consider acceleration and location in space). It only considers the relative angles between fingers and wrist.
+
+![l2 math](/notebook/guang/l2%20equation.png)
+
+The main idea is to use the L2 loss function to calculate the errors between the current orientations of user fingers and these in database and choose the gesture with the lowest error, as demonstrated by the equation.
+
+The implementation code is here.
+
+```python
+def l2_squared_error(imu_data, sensitivity):
+    gesture_imu = np.array(imu_data)
+    for i in range(1, 6):
+        for j in range(3):
+            gesture_imu[i][j] -= imu_data[0][j]
+ 
+    l2_array = list()
+    for gesture_data in gesture_database:
+        l2 = 0
+        for i in range(1, 6):
+             for j in range(3):
+                l2 += (gesture_imu[i][j] - gesture_data[1][i][j]) ** 2
+        l2_array.append(l2)
+ 
+    idx = np.argmin(np.array(l2_array))
+    if l2_array[idx] < sensitivity:
+        gesture = gesture_database[idx][0]
+    else:
+        gesture = "404"
+    return gesture
+```
+
+Note that I add sensitivity parameter to control the range of gestures that should be recognized as “No Gesture” when the error of the best match is too large.
 
 ## 2022-03-21 - Bluetooth
 
@@ -236,6 +269,46 @@ There are four peripheral components: switch, inductor, diode, and two capacitor
 From the tips of ME2108 datasheet[^1], I set these external components as close as possible to the IC and minimize the connection between the components and the IC while wiring to prevent the parasitic capacitance and inductance effect. Also, because zero level within IC may vary with the switching current which causes unstable operation of ME2108 chip, I make Vss pin sufficient grounding.
 
 ## 2022-04-02 - AI Model Design
+
+I use PyTorch library to implement and train my AI model. Here are two designs. The simple one with only two layers and complex one with five layers to see if adding more layers would help to recognize gesture and raise the correctness rate.
+
+The neural network with two layers:
+
+```python
+super(NeuralNet, self).__init__()
+hidden_units = 32
+self.model = nn.Sequential(
+    nn.Linear(in_size, hidden_units),
+    nn.ReLU(),
+    nn.Linear(hidden_units, out_size),
+)
+self.loss_fn = loss_fn
+self.optimizer = optim.SGD(self.model.parameters(), lr=lrate)
+```
+
+The neural network with five layers:
+```python
+super(NeuralNet, self).__init__()
+hidden_units_1 = 96
+hidden_units_2 = 48
+hidden_units_3 = 24
+hidden_units_4 = 12
+self.model = nn.Sequential(
+    nn.Linear(in_size, hidden_units_1),
+    nn.ReLU(),
+    nn.Linear(hidden_units_1, hidden_units_2),
+    nn.ReLU(),
+    nn.Linear(hidden_units_2, hidden_units_3),
+    nn.ReLU(),
+    nn.Linear(hidden_units_3, hidden_units_4),
+    nn.ReLU(),
+    nn.Linear(hidden_units_4, out_size),
+)
+self.loss_fn = loss_fn
+self.optimizer = optim.SGD(self.model.parameters(), lr=lrate)
+```
+
+The input is Euler angles, quaternion, accelerometer, gyroscope, and magnetometer. It is a 96 floats array. The output is the best math gesture index in database encoded in one-hot arrays. I just finished writing code for these modes. The training and adjusting parameters like learning rate, number of layers, and number of hidden units will start in the next week.
 
 ## 2022-04-05 - Choose L2 Algorithm Instead of AI
 
