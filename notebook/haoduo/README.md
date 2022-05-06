@@ -1,11 +1,18 @@
 # Haoduo's Worklog
 2022-01-31 	Project Approval
+
 2022-02-07 	Project Proposal
+
 2022-02-14 	Design Document & Review
+
 2022-02-28 	PCB Design
+
 2022-03-14 	Circuit Build
+
 2022-03-28 	Finalize the PCB
+
 2022-04-04	Data Retrieval
+
 2022-04-14	Testing & Demo
 
 # 2022-01-31 	Project Approval
