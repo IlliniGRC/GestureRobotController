@@ -1,11 +1,11 @@
 # Haoduo's Worklog
-2022-02-05 	Project approval
-
-
-
-
-
-
+2022-01-31 	Project Approval
+2022-02-07 	Project Proposal
+2022-02-14 	Design Document & Review
+2022-02-28 	PCB Design
+2022-03-14 	Circuit Build
+2022-03-28 	Finalize the PCB
+2022-04-04	Data Retrieval
 
 
 # 2022-01-31 	Project Approval
@@ -19,6 +19,7 @@ I created our initial block diagram. It was simple, contained the subsystems we 
 # 2022-02-14 	Design Document & Review
 We continued to work on the design document and attended the design review. TA offered a lot of suggestions. I studied a project from the previous semester about a glove that controlled drones. They used it to simulate the function of a mouse. We explained our logic to the head TA and asked him about the use of PCB. Our thought was to use a development board called Arduino ATmega328P, but this would not satisfy senior design's requirements. So we decided to build our own board.
 ![Alt text]()
+
 # 2022-02-28 	PCB Design
 I drew the first draft of our PCB board, including a basic processor, a Bluetooth module, and a power module. We then revised it and submitted the first-round PCB order. Meanwhile, we made a list of all the components we need, and I started to purchesing them. Hopefully they will arrive before the spring break.
 
