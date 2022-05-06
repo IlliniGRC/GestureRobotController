@@ -269,7 +269,87 @@ The verified functions table is here:
 
 ## 2022-03-26 - Encryption & JSON
 
+To protect user privacy, I plan to add encryption in bluetooth communication. To make it simple, I add the most famous and easiest encryption method: Caesar Cipher. Its theory is simple: each letter in the plaintext is replaced by a letter some fixed number of positions down the alphabet.
 
+Its implementation code is here.
+
+For encryption:
+
+```python
+def encrypt(text, key=0):
+    if not isinstance(text, str):
+        raise TypeError('{} should be a type string'.format(text))
+    if not isinstance(key, int):
+        raise TypeError('{} should be of type int'.format(key))
+    return ''.join([chr((ord(something) + key) % 128) for something in text])
+```
+
+For decryption:
+
+```python
+def decrypt(text, key=0):
+    if not isinstance(text, str):
+        raise TypeError('{} should be a type string'.format(text))
+    if not isinstance(key, int):
+        raise TypeError('{} should be of type int'.format(key))
+    return ''.join([chr((ord(something) - key) % 128) for something in text])
+
+```
+
+To formally format our gesture data for transmission, I use JSON to encode and decode our data.
+
+It likes like this:
+
+```json
+{
+    "frame_count": 1,
+    "dataset": {
+        "0": {
+            "tag": 0,
+            "Quaternion": {
+                "Thumb": [
+                    0.386627197265625,
+                    -0.321014404296875,
+                    -0.469329833984375,
+                    0.725982666015625
+                ],
+                "Index": [
+                    0.618255615234375,
+                    -0.372955322265625,
+                    -0.204864501953125,
+                    0.660736083984375
+                ],
+                "Middle": [
+                    0.656036376953125,
+                    -0.222991943359375,
+                    -0.135223388671875,
+                    0.708160400390625
+                ],
+                "Ring": [
+                    0.53155517578125,
+                    -0.44512939453125,
+                    0.21905517578125,
+                    0.68646240234375
+                ],
+                "Little": [
+                    0.682586669921875,
+                    0.248565673828125,
+                    0.311920166015625,
+                    -0.612274169921875
+                ],
+                "Hand": [
+                    0.631256103515625,
+                    0.17205810546875,
+                    0.742828369140625,
+                    -0.1414794921875
+                ]
+            }
+        }
+    }
+}
+```
+
+It makes gesture recording and database building much easier. It is also extremely human-readable, so it is also convenient for debugging.
 
 ## 2022-03-28 - Redesign Power System & Second PCB Design
 
@@ -402,11 +482,11 @@ To test this algorithm, I collected one set of data and visualized it through MA
 
 In the beginning, between samples 0 and 80, Gesture 0 has the lowest L2 error which is also below the threshold, so gesture 0 will be chosen as our prediction. Then, in sequence, we predict gesture 3 and gesture 2. In the period that covers samples 170 to 220, even though Gesture 0 has the lowest L2 error, its L2 error is above the threshold, so the algorithm judges that the user is doing a gesture that is not in the database and outputs gesture -1, indicating that there is no matching gesture found in the database.
 
-## 2022-04-12 - Prepare Robot for Demo
+## 2022-04-13 - Prepare Robot for Demo
 
-## 2022-04-17 - Integrate Everything Together
+First, we tuned the PID parameters to make the gimbal stable on our robot. Then, we add a ESP32 to receive command from PC through Bluetooth and then send that command to the control board for robot through UART serial port.
 
-## 2022-04-23 - 3D Printing Box
+## 2022-04-20 - 3D Printing Box
 
 In order to protect users skim from any possible electrical damage and make our project more engaging, I decide to design and print a box to contain our PCB board.
 
@@ -430,7 +510,9 @@ The final physical appearance:
 
 ![final](/notebook/guang/final.jpeg)
 
-## 2022-04-24 - Prepare Robot for Demo
+## 2022-04-25 - Fix the Bug found on Demo
+
+During the demo, our Bluetooth connection is extremely unstable and can only last for less than 2 minutes. After debugging, we found that one of our I2C wire has a connection issue, which makes our program can only receive data from 5 IMU, and the data processing function will generate "segment fault" which stops the Bluetooth connection. Now, this problem is solved by replacing that wire with a new one.
 
 [^1]: Micro One, “ME2108 Datasheet,” Nanjing Micro One Electronics Inc. \[Online\]. Available: http://www.microne.com.cn/EN/downloads.aspx?cid=17&id=51. \[Accessed: 30-Mar-2022\].
 
