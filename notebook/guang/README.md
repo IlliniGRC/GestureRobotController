@@ -90,6 +90,23 @@ The schematic for two ESP32:
 
 ## 2022-03-05 - IMU & I2C
 
+WT901 IMU supports two common communication protocols: UART and I2C.
+UART is bidirectional but one wire can only connect two devices, so if we use UART to connect 6 IMUs with ESP32, we need 6 UART. However, I2C can connect any number of devices into one wire but the data bandwidth is much less than UART. So, we use UART for calibration on PC and I2C to transfer data between IMUs and ESP32.
+
+The UART connection view:
+
+![IMU_UART](/notebook/guang/IMU_UART.png)
+
+To connect IMUs and ESP32 in one I2C line, we only need to connect them in parallel.
+
+The I2C connection view:
+
+![IMU_I2C](/notebook/guang/IMU_I2C.png)
+
+Note here that the two 4.7K resistors are necessary to make the connection stable. The value of resistance may depends on how many devices are connected in I2C, but here two 4.7K resistors are enough for our project.
+
+For calibration, we need to calibrate accelerometer and magnetometer separately. 
+
 ## 2022-03-10 - Bluetooth
 
 ## 2022-03-16 - L2 Algorithm Design
