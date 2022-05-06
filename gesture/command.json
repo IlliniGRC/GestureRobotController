@@ -1,0 +1,6 @@
+{
+  "0": "hold",
+  "1": "chassis|ch0,ch1,ch2",
+  "2": "gimbal|ch3,ch2",
+  "3": "shooter"
+}
