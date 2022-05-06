@@ -68,11 +68,7 @@ Its resolution is 0.005g for acceleration, 0.61°/s for gyroscope, 16 bits for m
 
 2. Need funding to buy stuffs.
 
-## 2022-02-25 - First PCB Design
-
-Requirements
-
-## 2022-02-27 - ESP32 Instead of STM32
+## 2022-02-25 - ESP32 Instead of STM32
 
 We originally planned to use STM32 as our micro controller unit. However while designing our first PCB board, we found out that STM32 needs too many peripheral components to operate and it is not easy to program and write code for STM32 even though it is extremely powerful. The most inconvenient thing is that we are not allowed to use external bluetooth modules, and designing a bluetooth module by ourselves is too complicated and out of our ability. Then we find that EPS32 may be our better solution.
 
@@ -88,6 +84,9 @@ So, after comparison and discussion, we decide to use ESP32 instead of STM32.
 ## 2022-02-29 - PCB Review
 
 We are told that our PCB is not sophisticated enough as senior project, and we should leave debugging pins to make sure that when one or two modules malfunction, other modules and microcontroller can still work. So we plan to use two ESP32 to perform different tasks and connect them through a UART port. To increase complexity, two OLED screens are added, so do buzzer, vibration motor, and two LEDs.
+
+The schematic for two ESP32:
+![MCU](/notebook/guang/MCU.png)
 
 ## 2022-03-05 - IMU & I2C
 
@@ -121,6 +120,8 @@ The main target for the power supply module is to step up the 3.7 voltage from L
 
 ## 2022-04-07 - from Quaternions to Euler Angles and Rotation Matrix
 
+![Quaternions to Euler angles](/notebook/guang/Q2Euler.svg)
+
 ## 2022-04-12 - Prepare Robot for Demo
 
 ## 2022-04-17 - Integrate Everything Together
@@ -133,7 +134,7 @@ The requirements are listed below:
 
 1. Screens, LEDs, I2C ports, buttons, switch, battery charge port, and Micro-USB port should be exposed to user, but other electric components should not.
 2. Should includes a small area to contain the battery inside.
-3. Should have two mounting points, so the device can be mounted on arms.
+3. Should have two mounting points, so the device can be mounted on arms.z
 
 Besides, I also plan to design 6 containers for IMUs.
 
