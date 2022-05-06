@@ -273,4 +273,4 @@ The final physical appearance:
 
 ## 2022-04-24 - Prepare Robot for Demo
 
-[^1]: test
+[^1]: Micro One, “ME2108 Datasheet,” Nanjing Micro One Electronics Inc. \[Online\]. Available: http://www.microne.com.cn/EN/downloads.aspx?cid=17&id=51. \[Accessed: 30-Mar-2022\].
