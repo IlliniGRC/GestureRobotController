@@ -314,7 +314,55 @@ The input is Euler angles, quaternion, accelerometer, gyroscope, and magnetomete
 
 ## 2022-04-07 - from Quaternions to Euler Angles and Rotation Matrix
 
+By searching online, I find equations[^2] to convert Quaternions to Euler angles.
+
 ![Quaternions to Euler angles](/notebook/guang/Q2Euler.svg)
+
+My code implementation is here:
+
+```python
+def Q2Euler(Q: Quaternion):
+    qw, qx, qy, qz = Q.elements
+    sinr_cosp = 2 * (qw * qx + qy * qz)
+    cosr_cosp = 1 - 2 * (qx * qx + qy * qy)
+    roll = np.arctan2(sinr_cosp, cosr_cosp)
+
+    sinp = 2 * (qw * qy - qz * qx)
+    if np.abs(sinp) >= 1:
+        pitch = np.copysign(np.pi / 2, sinp)
+    else:
+        pitch = np.arcsin(sinp)
+
+    siny_cosp = 2 * (qw * qz + qx * qy)
+    cosy_cosp = 1 - 2 * (qy * qy + qz * qz)
+    yaw = np.arctan2(siny_cosp, cosy_cosp)
+
+    return np.array([roll, pitch, yaw])
+```
+
+Since rotation matrix is also one of the most common method to representation orientation in 3D space, I also find the equations[^3] to convert Quaternions to rotation matrix.
+
+![Quaternions to rotation matrix](/notebook/guang/Q2matrix.svg)
+
+My code for it:
+
+```python
+def quaternion_rotation_matrix(Q: Quaternion):
+    a, b, c, d = Q.elements
+    r00 = 2 * a ** 2 - 1 + 2 * b ** 2
+    r01 = 2 * b * c + 2 * a * d
+    r02 = 2 * b * d - 2 * a * c
+    r10 = 2 * b * c - 2 * a * d
+    r11 = 2 * a ** 2 - 1 + 2 * c ** 2
+    r12 = 2 * c * d + 2 * a * b
+    r20 = 2 * b * d + 2 * a * c
+    r21 = 2 * c * d - 2 * a * b
+    r22 = 2 * a ** 2 - 1 + 2 * d ** 2
+    rot_matrix = np.array([[r00, r01, r02],
+                           [r10, r11, r12],
+                           [r20, r21, r22]])
+    return rot_matrix
+```
 
 ## 2022-04-12 - Prepare Robot for Demo
 
@@ -347,3 +395,7 @@ The final physical appearance:
 ## 2022-04-24 - Prepare Robot for Demo
 
 [^1]: Micro One, “ME2108 Datasheet,” Nanjing Micro One Electronics Inc. \[Online\]. Available: http://www.microne.com.cn/EN/downloads.aspx?cid=17&id=51. \[Accessed: 30-Mar-2022\].
+
+[^2]: “Conversion between quaternions and Euler angles,” Wikipedia, 28-Mar-2021. \[Online\]. Available: https://en.wikipedia.org/wiki/Conversion_between_quaternions_and_Euler_angles.\[Accessed: 07-Apr-2022\]. 
+
+[^3]: “Quaternions and spatial rotation,” Wikipedia, 02-Aug-2020. \[Online\]. Available: https://en.wikipedia.org/wiki/Quaternions_and_spatial_rotation. \[Accessed: 07-Apr-2022\]. 
