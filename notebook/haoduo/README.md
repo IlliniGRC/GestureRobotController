@@ -45,6 +45,6 @@ Before putting IMUs on the glove, I simulated some gestures to gather the data. 
 
 # 2022-04-14	Testing & Demo
 After assembling all parts, we tested our product on the actual robot. We now have two major problems. Frist is the magnetic interference on Z-axis. If it is not calibrated, it will bring about a large measurement error and affect the accuracy of the Z-axis angle measurement of the heading angle. Second is the Bluetooth communication between the computer and the robot. The latency is below 100ms, which is acceptable. However, there are chances of losing connection. After fixing these two issues, I will move on to record the extra credit video.
-![Alt text](https://github.com/IlliniGRC/GestureRobotController/blob/main/notebook/haoduo/layout.png)
+![Alt text](https://github.com/IlliniGRC/GestureRobotController/blob/main/notebook/haoduo/layout.jpg)
 
 Updated Video: https://www.youtube.com/watch?v=hFKa_ChovPw
