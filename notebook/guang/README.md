@@ -109,9 +109,36 @@ For calibration, we need to calibrate accelerometer and magnetometer separately.
 
 To differentiate different IMUs, they need different I2C addresses, so ESP32 can know which IMU corresponds to which finger. The configuration that we use for our project is listed in the table below.
 
-
+|  | **I2C Address** |
+|---|---|
+| **Middle** | 0x207 |
+| **Ring** | 0x206 |
+| **Little** | 0x205 |
+| **Thumb** | 0x209 |
+| **Hand** | 0x20A |
+| **Index** | 0x208 |
 
 ## 2022-03-10 - Bluetooth
+
+I mainly develop ESP32 with MicroPython library and it supports some low-level BLE APIs.
+My first simple version failed to connect with PC, but somehow it can pair and communicate with my iPad. It turns out that there are four BLE GAP roles: Broadcaster, Observer, Peripheral, and Central. Previously, I used the default Broadcaster and Observer mode with unidirectional, connection-less communications which is not supported by most PCs, so it did not work. So, I have dived into the BLE protocol details and refactored the whole code to place ESP32 as Peripheral and PC as Central.
+
+```python
+_UART_UUID = bluetooth.UUID('6E400001-B5A3-F393-E0A9-E50E24DCCA9E')
+_UART_TX = (
+    bluetooth.UUID('6E400003-B5A3-F393-E0A9-E50E24DCCA9E'),
+    _FLAG_READ | _FLAG_NOTIFY,
+)
+_UART_RX = (
+    bluetooth.UUID('6E400002-B5A3-F393-E0A9-E50E24DCCA9E'),
+    _FLAG_WRITE | _FLAG_WRITE_NO_RESPONSE,
+)
+```
+
+I registered two services for ESP32. The first UUID indicates that the data is about the Heart Rate (clearly it is not true, but since it does not influence any function, I leave it unchanged) and the next UUID marks the channels as Tx and Rx for transmitting and receiving message.
+My first implementation is quite naïve, but it demonstrates the general procedure to make the BLE works.
+
+![BLE 1.0](/notebook/guang/ble_1.0.jpg)
 
 ## 2022-03-16 - L2 Algorithm Design
 
@@ -121,6 +148,71 @@ There three popular orientation representation systems: Euler angles, rotation m
 
 ## 2022-03-21 - Bluetooth
 
+Continue to refine the code for Bluetooth function on ESP32.
+
+The first version that I implemented last time can not handle the situation when the connection loses after previous connection and to make sure that all messages will be handled and no computing power is wasted, the method for receiving message should be interrupt instead of polling. So, Interrupt Request (IRQ) is used to handle all functions in the second implementation.
+
+![BLE 2.0](/notebook/guang/ble_2.0.jpg)
+
+The IRQ handling code of the second implementation is here.
+
+```python
+class BLESimplePeripheral:
+    def __init__(self, ble, name='BLE'):
+        self.led = Pin(2, Pin.OUT)
+        self.timer1 = Timer(0)
+        self._ble = ble
+        self._ble.active(True)
+        self._ble.irq(self._irq)
+        ((self._handle_tx, self._handle_rx),) = self._ble.gatts_register_services((_UART_SERVICE,))
+        self._connections = set()
+        self._write_callback = None
+        self._payload = advertising_payload(name=name, services=[_UART_UUID])
+        self.timer1.init(period=100, mode=Timer.PERIODIC, callback=lambda t: self.led.value(not self.led.value()))
+        self._advertise()
+ 
+    def _irq(self, event, data):
+        # Track connections so we can send notifications.
+        if event == _IRQ_CENTRAL_CONNECT:
+            self.led.on()
+            self.timer1.deinit()
+            conn_handle, _, _ = data
+            print('New connection', conn_handle)
+            self._connections.add(conn_handle)
+        elif event == _IRQ_CENTRAL_DISCONNECT:
+            self.timer1.init(period=100, mode=Timer.PERIODIC, callback=lambda t: self.led.value(not self.led.value()))
+            conn_handle, _, _ = data
+            print('Disconnected', conn_handle)
+            self._connections.remove(conn_handle)
+            # Start advertising again to allow a new connection.
+            self._advertise()
+        elif event == _IRQ_GATTS_WRITE:
+            conn_handle, value_handle = data
+            value = self._ble.gatts_read(value_handle)
+            if value_handle == self._handle_rx and self._write_callback:
+                self._write_callback(value)
+```
+
+On the Linux PC side, I find a library called ble-serial to map the Bluetooth input and output channels into a virtual serial port, so I can access and process the data flow normally.
+
+```bash
+ble-scan -d 78:E3:6D:18:14:EE
+```
+
+This command is used to scan whether the ESP32 with the specified MAC address exists.
+
+```bash
+ble-serial -p /tmp/ttyBLE0 -d 78:E3:6D:18:14:EE -w 6e400002-b5a3-f393-e0a9-e50e24dcca9e -r 6e400003-b5a3-f393-e0a9-e50e24dcca9e
+```
+
+Connect to the ESP32 and map it into a virtual serial port /tmp/ttyBLE0.
+
+```bash
+screen /tmp/ttyBLE0
+```
+
+Open the virtual serial port in terminal, so I can read and write through keyboard to ESP32 by BLE.
+
 ## 2022-03-23 - First PCB Board Soldering and Verification
 
 ![first pcb board](/notebook/guang/first%20pcb.jpg)
@@ -129,11 +221,19 @@ There three popular orientation representation systems: Euler angles, rotation m
 
 ## 2022-03-28 - Redesign Power System & Second PCB Design
 
-![power system 1.0](/notebook/guang/first%20power%20system.png)
-
 The main target for the power supply module is to step up the 3.7 voltage from Lithium battery to 5 voltage and provide power for two ESP32 chips, sensors like IMUs, and actuators like LCD screen, LED, and vibration motor. The first version designed by Eric failed but he still hasn’t found the precise problem because the design is somewhat too complicated to analyze the correct behaviors for each component. The output port simply has no voltage, and we checked that soldering and wiring are correct, so it must be the design issue.
 
+![power system 1.0](/notebook/guang/first%20power%20system.png)
+
+So, I decide to redesign the whole module from scratch and find a chip that can fulfill the requirement easily. Through searching on Google, I find that ME2108 is the most popular IC solution and matches my need.
+
 ![power system 2.0](/notebook/guang/second%20power%20system.png)
+
+There are four peripheral components: switch, inductor, diode, and two capacitors. The function of switch is simple. It is purely used to turn on and off the wearable device. When turning off the device, to prevent the input from floating, one side of the switch should connect with the ground instead of nothing. Inductor is used to filter out the high frequency noise that may enter the Lx input. Capacitors are used to smooth the output voltage. Diode is used to prevent reverse current that may damage the ME2108 IC chip.
+
+![power system pcb](/notebook/guang/power_system_second_pcb.png)
+
+From the tips of ME2108 datasheet[^1], I set these external components as close as possible to the IC and minimize the connection between the components and the IC while wiring to prevent the parasitic capacitance and inductance effect. Also, because zero level within IC may vary with the switching current which causes unstable operation of ME2108 chip, I make Vss pin sufficient grounding.
 
 ## 2022-04-02 - AI Model Design
 
@@ -172,3 +272,5 @@ The final physical appearance:
 ![final](/notebook/guang/final.jpeg)
 
 ## 2022-04-24 - Prepare Robot for Demo
+
+[^1]: test
