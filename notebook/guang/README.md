@@ -105,7 +105,11 @@ The I2C connection view:
 
 Note here that the two 4.7K resistors are necessary to make the connection stable. The value of resistance may depends on how many devices are connected in I2C, but here two 4.7K resistors are enough for our project.
 
-For calibration, we need to calibrate accelerometer and magnetometer separately. 
+For calibration, we need to calibrate accelerometer and magnetometer separately. To calibrate accelerometer, we only need to hold the IMU static and press the button on calibration software. However, magnetometer calibration is much more complicated. There are 6 different calibration methods in total, so I tried all of them and found that ellipsoid fitting method works best for us. Other methods always have some degree of offset from real value after calibration, but ellipsoid fitting method does not have such problem.
+
+To differentiate different IMUs, they need different I2C addresses, so ESP32 can know which IMU corresponds to which finger. The configuration that we use for our project is listed in the table below.
+
+
 
 ## 2022-03-10 - Bluetooth
 
