@@ -62,11 +62,10 @@ Its resolution is 0.005g for acceleration, 0.61°/s for gyroscope, 16 bits for m
 > 
 > Buy: [AliExpress 427](https://www.aliexpress.com/premium/stm32f427.html) / [407](https://www.aliexpress.com/premium/stm32f407.html)
 
-### Future Problems
+- Future Problems
 
-1. Soldering chip is complicated and chips are fragile. We need professional engineers to help us.
-
-2. Need funding to buy stuffs.
+  1. Soldering chip is complicated and chips are fragile. We need professional engineers to help us.
+  2. Need funding to buy stuffs.
 
 ## 2022-02-25 - ESP32 Instead of STM32
 
@@ -248,9 +247,29 @@ Open the virtual serial port in terminal, so I can read and write through keyboa
 
 ## 2022-03-23 - First PCB Board Soldering and Verification
 
+Our order of electric components and PCB board arrived today, so I soldered and verified our first PCB board. In general, it works good. However, the power system can only output very small voltage around 0.5v with battery plugged in, which is much less than the required 5v. So, I will fix the bug in power system later.
+
+The verified functions table is here:
+
+|  | **Verification** |
+|---|---|
+| **Flash ESP32 through Micro-USB** | ✅ |
+| **Power the circuit though Micro-USB** | ✅ |
+| **Power the circuit though battery** | ❌ |
+| **I2C communication with IMU** | ✅ |
+| **UART communication between two ESP32** | ✅ |
+| **Buttons** | ✅ |
+| **Switches** | ✅ |
+| **PWM to drive buzzer** | ✅ |
+| **PWM to drive vibration motor** | ✅ |
+| **IO ports to drive LEDs** | ✅ |
+| **I2C communication to drive OLED screens** | ✅ |
+
 ![first pcb board](/notebook/guang/first%20pcb.jpg)
 
 ## 2022-03-26 - Encryption & JSON
+
+
 
 ## 2022-03-28 - Redesign Power System & Second PCB Design
 
@@ -310,9 +329,7 @@ self.optimizer = optim.SGD(self.model.parameters(), lr=lrate)
 
 The input is Euler angles, quaternion, accelerometer, gyroscope, and magnetometer. It is a 96 floats array. The output is the best math gesture index in database encoded in one-hot arrays. I just finished writing code for these modes. The training and adjusting parameters like learning rate, number of layers, and number of hidden units will start in the next week.
 
-## 2022-04-05 - Choose L2 Algorithm Instead of AI
-
-## 2022-04-07 - from Quaternions to Euler Angles and Rotation Matrix
+## 2022-04-05 - from Quaternions to Euler Angles and Rotation Matrix
 
 By searching online, I find equations[^2] to convert Quaternions to Euler angles.
 
@@ -363,6 +380,27 @@ def quaternion_rotation_matrix(Q: Quaternion):
                            [r20, r21, r22]])
     return rot_matrix
 ```
+
+## 2022-04-07 - Choose L2 Algorithm Instead of AI
+
+To honest, I don't think we have enough time to collect gesture training dataset and deploy my AI model, even though I already finished most of the code part. So, now I have to abort AI model development and focus on refining the L2 algorithm.
+
+After hours of thinking, the L2 algorithm works in this way:
+
+![L2 algorithm](/notebook/guang/l2.png)
+
+1. Get 6 groups of quaternions for each IMU mounted on the primary controller.
+2. 15 groups of quaternions are gathered by calculating the geodesic distances between every possible pair of the quaternion groups.
+3. Concatenate these 15 geodesic differences into one feature vector that contains all the information needed for user gestures.
+4. Calculate the L2 error between the current user gesture feature vector and each gesture feature vector in the prerecorded database. These L2 errors represent the similarity between vectors.
+5. Predicted gesture is chosen based on two criteria. Firstly, the L2 error between the current gesture and the predicted gesture needs to be smaller than a hyperparameter threshold; and secondly, if multiple gestures meet the requirement at the same time, the gesture in the database with the lowest L2 error will be chosen.
+6. After this arbitrating process, if no gesture is chosen because all the L2 errors are above the threshold, the algorithm will output no prediction.
+
+To test this algorithm, I collected one set of data and visualized it through MATLAB. The figure below demonstrates how the L2 algorithm works.
+
+![L2 example](/notebook/guang/l2_example.png)
+
+In the beginning, between samples 0 and 80, Gesture 0 has the lowest L2 error which is also below the threshold, so gesture 0 will be chosen as our prediction. Then, in sequence, we predict gesture 3 and gesture 2. In the period that covers samples 170 to 220, even though Gesture 0 has the lowest L2 error, its L2 error is above the threshold, so the algorithm judges that the user is doing a gesture that is not in the database and outputs gesture -1, indicating that there is no matching gesture found in the database.
 
 ## 2022-04-12 - Prepare Robot for Demo
 
