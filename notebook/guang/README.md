@@ -1,5 +1,7 @@
 # Guang Worklog
 
+---
+
 ## 2022-02-02 - Discussion for the Initial Idea
 
 The initial idea is pretty simple: use gesture to control robot, and we all agree that it would be very cool. However, it is hard to figure out how to achieve this and break it down into pieces. In industry, the most popular solution is to use optical motion capture systems which use cameras to capture and locate markers on objects and then trace their motions. However, it is expensive and if the marker is blocked by something, the motion tracing would be lost. So we plan to make it easier and more accessible by using other sensors to capture user gestures.
@@ -513,6 +515,8 @@ The final physical appearance:
 ## 2022-04-25 - Fix the Bug found on Demo
 
 During the demo, our Bluetooth connection is extremely unstable and can only last for less than 2 minutes. After debugging, we found that one of our I2C wire has a connection issue, which makes our program can only receive data from 5 IMU, and the data processing function will generate "segment fault" which stops the Bluetooth connection. Now, this problem is solved by replacing that wire with a new one.
+
+---
 
 [^1]: Micro One, “ME2108 Datasheet,” Nanjing Micro One Electronics Inc. \[Online\]. Available: http://www.microne.com.cn/EN/downloads.aspx?cid=17&id=51. \[Accessed: 30-Mar-2022\].
 
